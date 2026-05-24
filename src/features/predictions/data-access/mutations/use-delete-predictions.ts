@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { userPredictionsQueryKey } from "../keys";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 
@@ -17,11 +16,12 @@ export function useDeleteAllPredictions() {
   return useMutation({
     mutationFn: async () => {
       if (!userId) throw new Error("Not connected");
-      const { error } = await supabase
-        .from("predictions")
-        .delete()
-        .eq("user_id", userId);
-      if (error) throw error;
+      const res = await fetch("/api/predictions", {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Prediction reset failed");
     },
     onSuccess: () => {
       if (userId)

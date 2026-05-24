@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
 import { TEAM_TOKEN_MAP, TLA_TOKEN_MAP } from "@/lib/constants";
+import { requireDemoAdmin } from "@/lib/demo-admin";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import type { MatchStage } from "@/lib/types";
 
 const STAGE_MAP: Record<string, MatchStage> = {
@@ -20,11 +21,11 @@ function resolveToken(name: string, tla: string): string | null {
   return TEAM_TOKEN_MAP[name] ?? TLA_TOKEN_MAP[tla] ?? null;
 }
 
-export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  );
+export async function GET(req: NextRequest) {
+  const adminError = requireDemoAdmin(req);
+  if (adminError) return adminError;
+
+  const supabase = createServerSupabaseClient();
 
   const apiKey = process.env.FOOTBALL_DATA_API_KEY;
   if (!apiKey) {

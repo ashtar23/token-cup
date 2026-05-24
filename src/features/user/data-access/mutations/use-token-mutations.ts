@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { userTokensQueryKey } from "../keys";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 import type { UserToken } from "@/lib/types";
@@ -22,13 +21,14 @@ export function useUpsertUserToken() {
   return useMutation<unknown, Error, UpsertTokenInput, MutationContext>({
     mutationFn: async ({ symbol, amount }) => {
       if (!userId) throw new Error("Not connected");
-      const { error } = await supabase
-        .from("user_tokens")
-        .upsert(
-          { user_id: userId, token_symbol: symbol, staked_amount: amount },
-          { onConflict: "user_id,token_symbol" },
-        );
-      if (error) throw error;
+      const res = await fetch("/api/user/tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol, amount }),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Token update failed");
       return { symbol, amount };
     },
     onMutate: async ({ symbol, amount }) => {
@@ -77,12 +77,14 @@ export function useDeleteUserToken() {
   return useMutation<unknown, Error, string, MutationContext>({
     mutationFn: async (symbol) => {
       if (!userId) throw new Error("Not connected");
-      const { error } = await supabase
-        .from("user_tokens")
-        .delete()
-        .eq("user_id", userId)
-        .eq("token_symbol", symbol);
-      if (error) throw error;
+      const res = await fetch("/api/user/tokens", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol }),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Token delete failed");
       return symbol;
     },
     onMutate: async (symbol) => {

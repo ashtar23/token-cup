@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getServerUserId } from "@/lib/user-session.server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { getStakeEligibility } from "@/features/user/lib/stake-eligibility";
 
 export async function POST(req: NextRequest) {
   const userId = await getServerUserId();
@@ -8,10 +9,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not connected" }, { status: 401 });
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  );
+  const supabase = createServerSupabaseClient();
 
   const { matchId, predictedResult, predictedGoalsRange, predictedFirstScorer } =
     await req.json();
@@ -27,6 +25,7 @@ export async function POST(req: NextRequest) {
     { data: match },
     { data: userTokens },
     { data: thisMatchEntry },
+    { data: lastMatchEntry },
     { data: recentSettled },
   ] = await Promise.all([
     supabase.from("matches").select("*").eq("id", matchId).single(),
@@ -36,6 +35,14 @@ export async function POST(req: NextRequest) {
       .select("*")
       .eq("user_id", userId)
       .eq("match_id", matchId)
+      .maybeSingle(),
+    supabase
+      .from("user_match_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .neq("match_id", matchId)
+      .order("entered_at", { ascending: false })
+      .limit(1)
       .maybeSingle(),
     // For streak: only settled, non-voided predictions, newest first.
     // We walk this list to count consecutive correct ones.
@@ -65,19 +72,23 @@ export async function POST(req: NextRequest) {
   );
 
   const alreadyEntered = !!thisMatchEntry;
-  if (!alreadyEntered && totalStaked <= 0) {
+  const eligibility = getStakeEligibility({
+    alreadyEntered,
+    previousEntry: lastMatchEntry,
+    totalStaked,
+  });
+  if (!eligibility.eligible) {
     return NextResponse.json(
       {
-        error:
-          "No tokens staked. Stake fan tokens on Socios.com to participate.",
+        error: `Stake more fan tokens to enter this match. You need at least ${eligibility.requiredStake.toLocaleString()} total staked tokens.`,
       },
       { status: 400 },
     );
   }
 
-  const heldSymbols = (userTokens ?? []).map(
-    (t: { token_symbol: string }) => t.token_symbol,
-  );
+  const heldSymbols = (userTokens ?? [])
+    .filter((t: { staked_amount: number }) => t.staked_amount > 0)
+    .map((t: { token_symbol: string }) => t.token_symbol);
   const has2x =
     (match.home_token && heldSymbols.includes(match.home_token)) ||
     (match.away_token && heldSymbols.includes(match.away_token));

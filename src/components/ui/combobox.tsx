@@ -49,6 +49,7 @@ export function Combobox({
   itemHeight = ROW_HEIGHT_DEFAULT,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const listboxId = React.useId();
   const selected = options.find((o) => o.value === value);
 
   return (
@@ -57,6 +58,7 @@ export function Combobox({
         <button
           type="button"
           role="combobox"
+          aria-controls={listboxId}
           aria-expanded={open}
           disabled={disabled}
           className={cn(
@@ -101,6 +103,7 @@ export function Combobox({
           itemHeight={itemHeight}
           searchPlaceholder={searchPlaceholder}
           emptyMessage={emptyMessage}
+          listboxId={listboxId}
         />
       </PopoverContent>
     </Popover>
@@ -117,6 +120,7 @@ interface ComboboxContentProps {
   itemHeight: number;
   searchPlaceholder: string;
   emptyMessage: string;
+  listboxId: string;
 }
 
 function ComboboxContent({
@@ -127,6 +131,7 @@ function ComboboxContent({
   itemHeight,
   searchPlaceholder,
   emptyMessage,
+  listboxId,
 }: ComboboxContentProps) {
   const [search, setSearch] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(() => {
@@ -150,10 +155,8 @@ function ComboboxContent({
     });
   }, [options, search]);
 
-  // Clamp active row when filtered shrinks
-  React.useEffect(() => {
-    if (activeIndex >= filtered.length) setActiveIndex(0);
-  }, [filtered.length, activeIndex]);
+  const safeActiveIndex =
+    filtered.length === 0 ? 0 : Math.min(activeIndex, filtered.length - 1);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (filtered.length === 0) {
@@ -168,7 +171,7 @@ function ComboboxContent({
       setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const opt = filtered[activeIndex];
+      const opt = filtered[safeActiveIndex];
       if (opt && !opt.disabled) onSelect(opt.value);
     } else if (e.key === "Escape") {
       onClose();
@@ -207,10 +210,11 @@ function ComboboxContent({
         <VirtualizedList
           items={filtered}
           value={value}
-          activeIndex={activeIndex}
+          activeIndex={safeActiveIndex}
           setActiveIndex={setActiveIndex}
           onSelect={onSelect}
           itemHeight={itemHeight}
+          listboxId={listboxId}
         />
       )}
     </>
@@ -226,6 +230,7 @@ interface VirtualizedListProps {
   setActiveIndex: (i: number) => void;
   onSelect: (value: string) => void;
   itemHeight: number;
+  listboxId: string;
 }
 
 function VirtualizedList({
@@ -235,9 +240,11 @@ function VirtualizedList({
   setActiveIndex,
   onSelect,
   itemHeight,
+  listboxId,
 }: VirtualizedListProps) {
   const parentRef = React.useRef<HTMLDivElement | null>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
@@ -256,6 +263,7 @@ function VirtualizedList({
 
   return (
     <div
+      id={listboxId}
       ref={parentRef}
       className="overflow-y-auto overflow-x-hidden p-1"
       style={{ maxHeight: LIST_MAX_HEIGHT_PX }}

@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Token Cup
 
-## Getting Started
+Token Cup is a Socios-style World Cup prediction MVP. Players connect with a simulated wallet UUID, choose a leaderboard name, verify staked Fan Tokens, submit match predictions, and compete on per-match and tournament leaderboards.
 
-First, run the development server:
+## What Is Real
+
+- Next.js app with App Router routes and API handlers.
+- Supabase-backed users, token holdings, match entries, predictions, and leaderboard views.
+- football-data.org fixture sync and squad proxy support.
+- Backend settlement service that scores predictions and voids entries when current stake drops below the submission snapshot.
+
+## What Is Simulated
+
+- Wallet connect uses a UUID and deterministic fake wallet display.
+- Fan Token balances are demo rows in `user_tokens`.
+- The dev panel can edit token holdings and manually settle matches in local/demo environments.
+- Real Socios wallet reads and on-chain staking checks are not implemented yet.
+
+## Core Rules
+
+- A user must have staked Fan Tokens to enter their first match.
+- For each new match, the user's total staked amount must exceed their previous match-entry snapshot.
+- Holding a token for either team in the match applies a 2x points multiplier.
+- Predictions are voided at settlement if the user's current stake is below their submission snapshot.
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+FOOTBALL_DATA_API_KEY=
+CRON_SECRET=
+DEMO_ADMIN_SECRET=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`DEMO_ADMIN_SECRET` is required for production access to demo/admin endpoints such as manual settlement and fixture sync.
 
-## Learn More
+## Verification
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm lint
+npx tsc --noEmit
+pnpm build
+```

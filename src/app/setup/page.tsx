@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
@@ -33,8 +33,8 @@ export default function SetupPage() {
 
   const {
     register,
+    control,
     handleSubmit,
-    watch,
     setError,
     formState: { errors },
   } = useForm<FormValues>({
@@ -42,7 +42,7 @@ export default function SetupPage() {
     defaultValues: { fantasyName: "" },
   });
 
-  const nameValue = watch("fantasyName");
+  const nameValue = useWatch({ control, name: "fantasyName" }) ?? "";
   const isSubmitting = setFantasyName.isPending;
 
   useEffect(() => {

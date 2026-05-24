@@ -15,7 +15,6 @@ export default function AppError({
   useEffect(() => {
     // Surface in dev so you can spot it; real telemetry would go here
     if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
       console.error("[app/error]", error);
     }
   }, [error]);

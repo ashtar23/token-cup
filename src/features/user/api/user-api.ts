@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-import { fakeWalletFromUserId } from "@/lib/user-session";
 import type { User, UserMatchEntry, UserToken } from "@/lib/types";
 
 export async function fetchUser(userId: string): Promise<User | null> {
@@ -17,18 +16,14 @@ export async function fetchUser(userId: string): Promise<User | null> {
  * is a no-op that returns the existing row.
  */
 export async function upsertUser(userId: string): Promise<User> {
-  const { data, error } = await supabase
-    .from("users")
-    .upsert(
-      {
-        id: userId,
-        wallet_address: fakeWalletFromUserId(userId),
-      },
-      { onConflict: "id", ignoreDuplicates: false },
-    )
-    .select("*")
-    .single();
-  if (error) throw error;
+  const res = await fetch("/api/user/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+    credentials: "same-origin",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Connect failed");
   return data as User;
 }
 
@@ -44,14 +39,20 @@ export async function fetchUserTokens(userId: string): Promise<UserToken[]> {
 
 export async function fetchLastMatchEntry(
   userId: string,
+  excludeMatchId?: string,
 ): Promise<UserMatchEntry | null> {
-  const { data } = await supabase
+  let query = supabase
     .from("user_match_entries")
     .select("*")
     .eq("user_id", userId)
     .order("entered_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (excludeMatchId) {
+    query = query.neq("match_id", excludeMatchId);
+  }
+
+  const { data } = await query.maybeSingle();
   return data as UserMatchEntry | null;
 }
 

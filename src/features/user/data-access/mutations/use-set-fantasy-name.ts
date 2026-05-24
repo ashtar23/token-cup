@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { userQueryKey } from "../keys";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 
@@ -21,17 +20,20 @@ export function useSetFantasyName() {
   return useMutation({
     mutationFn: async (fantasyName: string) => {
       if (!userId) throw new Error("Not connected");
-      const { error } = await supabase
-        .from("users")
-        .update({ fantasy_name: fantasyName })
-        .eq("id", userId);
-      if (!error) return;
+      const res = await fetch("/api/user/fantasy-name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fantasyName }),
+        credentials: "same-origin",
+      });
+      if (res.ok) return;
 
       // Surface the unique-violation case distinctly so the UI can show
       // a precise error. Everything else propagates as-is.
-      const code = (error as { code?: string }).code;
+      const data = await res.json();
+      const code = (data as { code?: string }).code;
       if (code === PG_UNIQUE_VIOLATION) throw new FantasyNameTakenError();
-      throw error;
+      throw new Error(data.error ?? "Couldn't save fantasy name");
     },
     onSuccess: () => {
       if (userId)

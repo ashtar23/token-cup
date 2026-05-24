@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
 import { TEAM_TOKEN_MAP, TLA_TOKEN_MAP } from "@/lib/constants";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { settleMatchService } from "@/features/predictions/lib/settle";
 import type { MatchStage } from "@/lib/types";
 
@@ -33,6 +33,12 @@ export async function GET(req: NextRequest) {
   // Protect the endpoint — Vercel sends Bearer <CRON_SECRET> automatically
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
+  if (process.env.NODE_ENV === "production" && !cronSecret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET is required in production" },
+      { status: 500 },
+    );
+  }
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -45,10 +51,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  );
+  const supabase = createServerSupabaseClient();
 
   const res = await fetch(
     "https://api.football-data.org/v4/competitions/WC/matches",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Check, Copy, Loader2 } from "lucide-react";
@@ -42,8 +42,8 @@ export function AccountPage() {
 
   const {
     register,
+    control,
     handleSubmit,
-    watch,
     reset,
     setError,
     formState: { errors, isDirty },
@@ -52,7 +52,7 @@ export function AccountPage() {
     values: { fantasyName: user?.fantasy_name ?? "" },
   });
 
-  const nameValue = watch("fantasyName");
+  const nameValue = useWatch({ control, name: "fantasyName" }) ?? "";
   const isSubmitting = setFantasyName.isPending;
 
   async function onSubmit({ fantasyName }: FormValues) {
@@ -161,9 +161,7 @@ export function AccountPage() {
         {/* Wallet details */}
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-base font-semibold text-foreground">
-              Wallet
-            </p>
+            <p className="text-base font-semibold text-foreground">Wallet</p>
             <Row label="Address">
               <span className="font-mono text-xs">
                 {userId ? fakeWalletFromUserId(userId) : "—"}

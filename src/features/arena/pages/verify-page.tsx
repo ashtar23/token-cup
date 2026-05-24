@@ -15,6 +15,7 @@ import {
   useMatchEntry,
 } from "@/features/user/data-access/queries/use-last-match-entry";
 import { getTotalStaked, getHeldTokenSymbols } from "@/features/user/lib/tokens";
+import { getStakeEligibility } from "@/features/user/lib/stake-eligibility";
 import { TEAM_FLAG } from "@/lib/constants";
 
 export function VerifyPage() {
@@ -27,7 +28,7 @@ export function VerifyPage() {
     isLoading: tokensLoading,
     refetch: refetchTokens,
   } = useUserTokens();
-  const { isLoading: entryLoading } = useLastMatchEntry();
+  const { data: lastEntry, isLoading: entryLoading } = useLastMatchEntry(matchId);
   const { data: thisMatchEntry, isLoading: thisEntryLoading } =
     useMatchEntry(matchId);
 
@@ -44,7 +45,12 @@ export function VerifyPage() {
 
   const totalStaked = getTotalStaked(userTokens);
   const alreadyEntered = !!thisMatchEntry;
-  const eligible = alreadyEntered || totalStaked > 0;
+  const eligibility = getStakeEligibility({
+    alreadyEntered,
+    previousEntry: lastEntry ?? null,
+    totalStaked,
+  });
+  const eligible = eligibility.eligible;
 
   const heldTokens = getHeldTokenSymbols(userTokens);
   const matchTokens = [match.home_token, match.away_token].filter(
@@ -128,7 +134,9 @@ export function VerifyPage() {
               ) : (
                 <>
                   <span className="font-medium">You&apos;re eligible.</span>{" "}
-                  {totalStaked.toLocaleString()} tokens staked.
+                  {totalStaked.toLocaleString()} tokens staked
+                  {eligibility.previousStake !== null &&
+                    `, above your previous ${eligibility.previousStake.toLocaleString()} token entry.`}
                 </>
               )}
             </p>
@@ -137,8 +145,9 @@ export function VerifyPage() {
           <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
             <span className="text-lg shrink-0" aria-hidden="true">❌</span>
             <p className="text-sm text-foreground">
-              <span className="font-medium">No stake found.</span> You need at
-              least some tokens staked to enter. Head to Socios.com to stake.
+              <span className="font-medium">More stake needed.</span> You need{" "}
+              {eligibility.requiredStake.toLocaleString()}+ total tokens staked
+              to enter this match. Head to Socios.com to stake more.
             </p>
           </div>
         )}

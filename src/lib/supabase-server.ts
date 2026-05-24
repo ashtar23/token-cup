@@ -9,8 +9,8 @@ export function createServerSupabaseClient() {
   if (!supabaseUrl) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
   }
-  if (process.env.NODE_ENV === "production" && !serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required in production");
+  if (!serviceRoleKey && !publishableKey) {
+    throw new Error("Supabase server key is not set");
   }
 
   return createClient(supabaseUrl, serviceRoleKey ?? publishableKey!, {

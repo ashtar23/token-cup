@@ -38,10 +38,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 FOOTBALL_DATA_API_KEY=
 CRON_SECRET=
-DEMO_ADMIN_SECRET=
 ```
 
-`DEMO_ADMIN_SECRET` is required for production access to demo/admin endpoints such as manual settlement and fixture sync.
 `SUPABASE_SERVICE_ROLE_KEY` is optional for the current demo schema, but should be set before tightening RLS policies.
 
 ## Verification

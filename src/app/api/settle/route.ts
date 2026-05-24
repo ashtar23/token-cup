@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { settleMatchService } from "@/features/predictions/lib/settle";
-import { requireDemoAdmin } from "@/lib/demo-admin";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 /**
@@ -10,9 +9,6 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
  * match's status transitions to FINISHED upstream.
  */
 export async function POST(req: NextRequest) {
-  const adminError = requireDemoAdmin(req);
-  if (adminError) return adminError;
-
   const supabase = createServerSupabaseClient();
   const { matchId, homeScore, awayScore } = await req.json();
 

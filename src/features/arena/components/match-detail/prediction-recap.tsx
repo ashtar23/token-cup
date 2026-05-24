@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { BASE_POINTS } from "@/lib/constants";
+import { BASE_POINTS, STREAK_THRESHOLD } from "@/lib/constants";
 import type { Match, Prediction } from "@/lib/types";
 import { formatResult, getPredictionOutcome } from "./match-detail-utils";
 
@@ -81,7 +81,13 @@ function SettlementReveal({
           </div>
         </div>
 
-        <div className="space-y-2 p-4 text-sm">
+        <div className="space-y-3 p-4 text-sm">
+          <div className="grid grid-cols-[72px_1fr_1fr_56px] gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span />
+            <span>Pick</span>
+            <span>Actual</span>
+            <span className="text-right">Pts</span>
+          </div>
           <RevealRow
             label="Result"
             pick={formatResult(prediction.predicted_result, match)}
@@ -99,11 +105,17 @@ function SettlementReveal({
             />
           )}
           <div className="flex items-center justify-between gap-3 border-t border-tc-green/20 pt-2">
-            <span className="text-muted-foreground">Multipliers</span>
+            <span className="text-muted-foreground">Bonus status</span>
             <span className="text-right font-medium text-foreground">
               {prediction.has_2x_bonus ? "2x token bonus" : "1x base"}
-              {prediction.streak_count > 0 &&
-                ` · ${prediction.streak_count} streak`}
+              {prediction.streak_count > 0 && (
+                <>
+                  {" · "}
+                  {prediction.streak_count >= STREAK_THRESHOLD
+                    ? `${prediction.streak_count} streak active`
+                    : `streak ${prediction.streak_count}/${STREAK_THRESHOLD}`}
+                </>
+              )}
             </span>
           </div>
           {prediction.is_voided && (
@@ -129,9 +141,10 @@ function RevealRow({
   hit: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[72px_1fr_auto] items-center gap-2">
+    <div className="grid grid-cols-[72px_1fr_1fr_56px] items-center gap-2">
       <span className="text-muted-foreground">{label}</span>
       <span className="truncate font-medium text-foreground">{pick}</span>
+      <span className="truncate text-muted-foreground">{actual}</span>
       <Badge
         className={
           hit
@@ -139,7 +152,7 @@ function RevealRow({
             : "border-border bg-muted text-muted-foreground"
         }
       >
-        {hit ? `+${BASE_POINTS}` : actual}
+        {hit ? `+${BASE_POINTS}` : "0"}
       </Badge>
     </div>
   );

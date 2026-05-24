@@ -5,6 +5,7 @@ import { fetchSquad, type Squad } from "../../api/teams-api";
 import { squadQueryKey } from "../keys";
 
 const SQUAD_STALE_TIME_MS = 30 * 60 * 1000; // 30 min — squads rarely change
+const SQUAD_GC_TIME_MS = 60 * 60 * 1000;
 
 export function useSquad(teamApiId: number | null | undefined) {
   return useQuery({
@@ -12,6 +13,7 @@ export function useSquad(teamApiId: number | null | undefined) {
     queryFn: () => fetchSquad(teamApiId as number),
     enabled: !!teamApiId,
     staleTime: SQUAD_STALE_TIME_MS,
+    gcTime: SQUAD_GC_TIME_MS,
     retry: 1,
   });
 }
@@ -28,6 +30,7 @@ export function useSquads(teamApiIds: Array<number | null | undefined>) {
       queryFn: () => fetchSquad(id as number),
       enabled: !!id,
       staleTime: SQUAD_STALE_TIME_MS,
+      gcTime: SQUAD_GC_TIME_MS,
       retry: 1,
     })),
   }) as Array<{

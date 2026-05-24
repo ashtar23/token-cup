@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Clock3, Coins, Flame, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +23,7 @@ export function MatchHero({
   totalStaked,
   stakeSnapshot,
 }: MatchHeroProps) {
-  const kickoffLabel = getKickoffLabel(match);
+  const kickoffLabel = useKickoffLabel(match);
 
   return (
     <Card className="overflow-hidden border border-primary/20 bg-card">
@@ -36,17 +39,13 @@ export function MatchHero({
         </div>
 
         <div className="space-y-4 p-5">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="text-xl font-bold text-foreground">
-              <span className="mr-1 text-2xl">
-                {TEAM_FLAG[match.home_team] ?? "🏳️"}
+          <div className="space-y-3 text-center">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <TeamName align="right" name={match.home_team} />
+              <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold uppercase text-muted-foreground">
+                vs
               </span>
-              {match.home_team}
-              <span className="mx-3 font-normal text-muted-foreground">vs</span>
-              {match.away_team}
-              <span className="ml-1 text-2xl">
-                {TEAM_FLAG[match.away_team] ?? "🏳️"}
-              </span>
+              <TeamName align="left" name={match.away_team} />
             </div>
 
             {match.status === "settled" && match.home_score !== null && (
@@ -62,7 +61,7 @@ export function MatchHero({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <TicketStat
               icon={<Clock3 className="h-3.5 w-3.5" />}
               label={match.status === "upcoming" ? "Kickoff" : "Status"}
@@ -89,6 +88,30 @@ export function MatchHero({
   );
 }
 
+function TeamName({ align, name }: { align: "left" | "right"; name: string }) {
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-1.5 ${
+        align === "right" ? "justify-end" : "justify-start"
+      }`}
+    >
+      {align === "right" && (
+        <span className="shrink-0 text-2xl leading-none">
+          {TEAM_FLAG[name] ?? "🏳️"}
+        </span>
+      )}
+      <span className="min-w-0 truncate text-base font-bold text-foreground sm:text-xl">
+        {name}
+      </span>
+      {align === "left" && (
+        <span className="shrink-0 text-2xl leading-none">
+          {TEAM_FLAG[name] ?? "🏳️"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function TicketStat({
   icon,
   label,
@@ -109,4 +132,20 @@ function TicketStat({
       </div>
     </div>
   );
+}
+
+function useKickoffLabel(match: Match): string {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (match.status !== "upcoming") return;
+
+    const interval = window.setInterval(() => {
+      setTick((tick) => tick + 1);
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, [match]);
+
+  return getKickoffLabel(match);
 }

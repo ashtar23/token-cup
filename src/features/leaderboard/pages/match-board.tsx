@@ -3,10 +3,15 @@
 import { useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMatches } from "@/features/matches/data-access/queries/use-matches";
 import { useMatchLeaderboard } from "../data-access/queries/use-match-leaderboard";
-import { LeaderboardTable, type BoardRow } from "../components/leaderboard-table";
+import {
+  LeaderboardTable,
+  type BoardRow,
+} from "../components/leaderboard-table";
 import { TEAM_FLAG } from "@/lib/constants";
+import type { Match } from "@/lib/types";
 
 interface Props {
   initialMatchId?: string;
@@ -22,6 +27,7 @@ export function MatchBoard({ initialMatchId }: Props) {
   // Effective match: URL param > prop > first match
   const selectedMatchId =
     searchParams.get("match") || initialMatchId || matches[0]?.id || "";
+  const selectedMatch = matches.find((match) => match.id === selectedMatchId);
 
   const { data: rows = [], isLoading } = useMatchLeaderboard(selectedMatchId);
 
@@ -53,19 +59,18 @@ export function MatchBoard({ initialMatchId }: Props) {
   return (
     <>
       {matches.length > 0 && (
-        <Combobox
+        <MatchPicker
           options={matchOptions}
-          value={selectedMatchId}
-          onChange={onMatchChange}
-          placeholder="Select a match…"
-          searchPlaceholder="Search teams or group…"
-          emptyMessage="No matches found."
+          selectedMatchId={selectedMatchId}
+          selectedMatch={selectedMatch}
+          onMatchChange={onMatchChange}
         />
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="spinner" />
+        <div className="space-y-3">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
         </div>
       ) : (
         <LeaderboardTable
@@ -74,5 +79,54 @@ export function MatchBoard({ initialMatchId }: Props) {
         />
       )}
     </>
+  );
+}
+
+function MatchPicker({
+  options,
+  selectedMatchId,
+  selectedMatch,
+  onMatchChange,
+}: {
+  options: ComboboxOption[];
+  selectedMatchId: string;
+  selectedMatch: Match | undefined;
+  onMatchChange: (matchId: string) => void;
+}) {
+  return (
+    <Combobox
+      options={options}
+      value={selectedMatchId}
+      onChange={onMatchChange}
+      placeholder="Select a match..."
+      searchPlaceholder="Search teams or group..."
+      emptyMessage="No matches found."
+      itemHeight={48}
+      className="h-auto min-h-[72px] rounded-xl border-border bg-card px-4 py-3 text-left"
+      renderValue={() =>
+        selectedMatch ? (
+          <SelectedMatchValue match={selectedMatch} />
+        ) : (
+          "Select a match..."
+        )
+      }
+    />
+  );
+}
+
+function SelectedMatchValue({ match }: { match: Match }) {
+  return (
+    <span className="block min-w-0">
+      <span className="block truncate text-sm font-semibold text-foreground">
+        {TEAM_FLAG[match.home_team] ?? ""} {match.home_team} vs{" "}
+        {TEAM_FLAG[match.away_team] ?? ""} {match.away_team}
+      </span>
+      <span className="mt-1 block truncate text-xs text-muted-foreground">
+        {match.group_name ?? "Knockout"} ·{" "}
+        {match.status === "settled"
+          ? "Final leaderboard"
+          : "Waiting for settled predictions"}
+      </span>
+    </span>
   );
 }

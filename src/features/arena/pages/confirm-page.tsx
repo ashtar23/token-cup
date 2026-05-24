@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle, Check, Trophy } from "lucide-react";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,7 +54,7 @@ export function ConfirmPage() {
         <SummaryCard match={match} prediction={prediction} />
         <StakeWarning />
         <PrizeRow />
-        <Actions />
+        <Actions matchId={match.id} />
       </div>
     </>
   );
@@ -63,7 +64,7 @@ function Hero({ match }: { match: Match }) {
   return (
     <div className="flex flex-col items-center text-center gap-3">
       <div className="flex items-center justify-center w-16 h-16 rounded-full bg-tc-green/10 border-2 border-tc-green">
-        <span className="text-3xl" aria-hidden="true">✓</span>
+        <Check className="h-8 w-8 text-tc-green" />
       </div>
       <h1 className="text-2xl font-bold text-foreground">Predictions locked!</h1>
       <p className="text-sm text-muted-foreground">
@@ -83,7 +84,7 @@ function StatsGrid({ prediction }: { prediction: Prediction }) {
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      <StatCard label="Predictions" value={predictionsCount} />
+      <StatCard label="Picks made" value={predictionsCount} />
       <StatCard label="Multiplier" value={prediction.has_2x_bonus ? "2×" : "1×"} />
       <StatCard label="Streak" value={prediction.streak_count} />
     </div>
@@ -172,7 +173,7 @@ function SummaryRow({
 function StakeWarning() {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-tc-amber/30 bg-tc-amber/5 px-4 py-3">
-      <span className="text-lg shrink-0" aria-hidden="true">⚠️</span>
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-tc-amber" />
       <p className="text-sm text-tc-amber">
         Keep tokens staked until full time. Unstaking before settlement voids
         your predictions.
@@ -184,7 +185,9 @@ function StakeWarning() {
 function PrizeRow() {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-      <span className="text-2xl shrink-0" aria-hidden="true">🏆</span>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tc-amber/10">
+        <Trophy className="h-5 w-5 text-tc-amber" />
+      </div>
       <div>
         <p className="text-sm font-semibold text-foreground">
           Match winner prize
@@ -197,14 +200,14 @@ function PrizeRow() {
   );
 }
 
-function Actions() {
+function Actions({ matchId }: { matchId: string }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row">
       <Button
         asChild
         className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12"
       >
-        <Link href="/leaderboard">View leaderboard</Link>
+        <Link href={`/leaderboard/match?match=${matchId}`}>View leaderboard</Link>
       </Button>
       <Button asChild variant="outline" className="flex-1 h-12">
         <Link href="/arena">Back to hub</Link>

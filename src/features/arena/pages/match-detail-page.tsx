@@ -50,7 +50,11 @@ export function MatchDetailPage() {
           <PredictionRecap match={match} prediction={prediction} />
         )}
         <SquadsSection match={match} />
-        <ActionRow match={match} prediction={prediction ?? null} />
+        <ActionRow
+          match={match}
+          prediction={prediction ?? null}
+          has2x={has2x}
+        />
       </div>
     </>
   );

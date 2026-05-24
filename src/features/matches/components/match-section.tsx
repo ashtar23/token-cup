@@ -19,14 +19,14 @@ function MatchSectionInner({
 }: MatchSectionProps) {
   if (matches.length === 0) return null;
   return (
-    <section className="space-y-3">
+    <section className="space-y-2.5">
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
         {title}
         <span className="ml-2 text-muted-foreground/60 normal-case tracking-normal">
           ({matches.length})
         </span>
       </h2>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-2.5 md:grid-cols-2">
         {matches.map((m) => (
           <MatchCard
             key={m.id}

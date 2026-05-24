@@ -48,11 +48,41 @@ export function LeaderboardTable({
     ? rankedRows.find((item) => item.row.user_id === currentUserId)
     : undefined;
   const showPinnedUser = !!currentUserRank && currentUserRank.rank > 10;
+  const nextRank =
+    currentUserRank && currentUserRank.rank > 1
+      ? rankedRows[currentUserRank.rank - 2]
+      : undefined;
+  const pointsToNextRank =
+    currentUserRank && nextRank
+      ? Math.max(
+          0,
+          nextRank.row.total_points - currentUserRank.row.total_points + 1,
+        )
+      : null;
 
   return (
     <div className="space-y-3">
+      {currentUserRank && pointsToNextRank !== null && (
+        <Card className="border border-primary/25 bg-primary/5 px-4 py-3">
+          <p className="text-sm font-semibold text-foreground">
+            You are {pointsToNextRank.toLocaleString()} pts from rank{" "}
+            {currentUserRank.rank - 1}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Next target: {nextRank?.row.fantasy_name}
+          </p>
+        </Card>
+      )}
+
       {topThree.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div
+          className={cn(
+            "grid gap-2",
+            topThree.length === 1 && "grid-cols-1",
+            topThree.length === 2 && "grid-cols-2",
+            topThree.length >= 3 && "grid-cols-3",
+          )}
+        >
           {topThree.map(({ row, rank }) => (
             <PodiumCard
               key={row.user_id}
@@ -109,18 +139,23 @@ function PodiumCard({
   return (
     <Card
       className={cn(
-        "border border-border bg-card",
+        "border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:shadow-md",
         rank === 1 && "border-tc-amber/40 bg-tc-amber/5",
         isMe && "border-primary/40 bg-primary/5",
       )}
     >
-      <div className="p-3 text-center">
-        <div className="text-2xl leading-none">{medal}</div>
-        <div className="mt-2 truncate text-sm font-semibold text-foreground">
-          {row.fantasy_name}
+      <div className="flex items-center gap-3 p-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background text-xl leading-none">
+          {medal}
         </div>
-        <div className="mt-1 text-xs font-semibold tabular-nums text-muted-foreground">
-          {row.total_points.toLocaleString()} pts
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-foreground">
+            {row.fantasy_name}
+          </div>
+          <div className="mt-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+            {row.total_points.toLocaleString()} pts
+          </div>
+          <RowBadges row={row} compact />
         </div>
       </div>
     </Card>
@@ -138,7 +173,6 @@ function LeaderboardRow({
   isMe: boolean;
   pinned?: boolean;
 }) {
-  const streak = row.max_streak ?? row.streak_count ?? 0;
   return (
     <div
       className={cn(
@@ -163,19 +197,50 @@ function LeaderboardRow({
           {row.fantasy_name}
         </span>
         {isMe && <span className="text-xs text-primary shrink-0">(you)</span>}
-        {streak >= STREAK_THRESHOLD && (
-          <span
-            className="text-xs shrink-0"
-            title={`${streak}-match streak`}
-            aria-label="On streak"
-          >
-            🔥
-          </span>
-        )}
+        <RowBadges row={row} />
       </div>
       <div className="col-span-3 text-right font-semibold tabular-nums text-foreground">
         {row.total_points.toLocaleString()}
       </div>
+    </div>
+  );
+}
+
+function RowBadges({
+  row,
+  compact = false,
+}: {
+  row: BoardRow;
+  compact?: boolean;
+}) {
+  const streak = row.max_streak ?? row.streak_count ?? 0;
+  const predictionCount = row.count ?? null;
+
+  if (streak < STREAK_THRESHOLD && predictionCount === null) return null;
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-1",
+        compact && "mt-2",
+      )}
+    >
+      {streak >= STREAK_THRESHOLD && (
+        <span
+          className="rounded-full bg-tc-orange/15 px-1.5 py-0.5 text-[10px] font-semibold text-tc-orange"
+          title={`${streak}-match streak qualifies for the streak multiplier`}
+        >
+          {streak} streak
+        </span>
+      )}
+      {predictionCount !== null && (
+        <span
+          className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+          title="Settled predictions counted in this leaderboard"
+        >
+          {predictionCount} picks
+        </span>
+      )}
     </div>
   );
 }

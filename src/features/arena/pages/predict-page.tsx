@@ -6,7 +6,7 @@ import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { useMatch } from "@/features/matches/data-access/queries/use-match";
 import { useUserTokens } from "@/features/user/data-access/queries/use-user-tokens";
@@ -69,6 +69,11 @@ export function PredictPage() {
   ];
 
   const maxPossible = has2x ? 400 : 200;
+  const selectedResultLabel =
+    resultOptions.find((option) => option.value === selectedResult)?.label ??
+    null;
+  const selectedGoalsLabel =
+    GOALS_RANGES.find((range) => range.value === selectedGoals)?.label ?? null;
 
   async function handleSubmit() {
     if (!selectedResult || !matchId) return;
@@ -138,7 +143,7 @@ export function PredictPage() {
                 otherwise display irrelevant fallback names (e.g. Messi
                 for Canada vs France), which looks broken. */}
             {(match.home_team_api_id || match.away_team_api_id) && (
-              <PredictionCard title="First goalscorer">
+              <PredictionCard title="First goalscorer" optional>
                 <FirstScorerPicker
                   homeTeamApiId={match.home_team_api_id}
                   awayTeamApiId={match.away_team_api_id}
@@ -150,7 +155,7 @@ export function PredictPage() {
               </PredictionCard>
             )}
 
-            <PredictionCard title="Total goals">
+            <PredictionCard title="Total goals" optional>
               <div className="grid grid-cols-3 gap-2">
                 {GOALS_RANGES.map((range) => (
                   <ToggleButton
@@ -164,28 +169,16 @@ export function PredictPage() {
               </div>
             </PredictionCard>
 
-            <Card className="border border-border bg-muted">
-              <CardContent className="p-4 space-y-2 text-base">
-                <Row label="Correct result" value="100 pts" />
-                <Row label="Correct goals range" value="100 pts" />
-                {has2x && (
-                  <Row
-                    label="Team token bonus"
-                    value="2× applied"
-                    accent="orange"
-                  />
-                )}
-                <div className="flex justify-between text-muted-foreground text-sm border-t border-border pt-2 mt-1">
-                  <span>Max possible this match</span>
-                  <span>{maxPossible} pts</span>
-                </div>
-              </CardContent>
-            </Card>
+            <PredictionSlip
+              selectedResult={selectedResultLabel}
+              selectedGoals={selectedGoalsLabel}
+              selectedScorer={selectedScorer}
+              has2x={Boolean(has2x)}
+              maxPossible={maxPossible}
+            />
 
             <div className="flex items-start gap-3 rounded-xl border border-tc-amber/30 bg-tc-amber/5 px-4 py-3">
-              <span className="text-lg shrink-0" aria-hidden="true">
-                ⚠️
-              </span>
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-tc-amber" />
               <p className="text-sm text-tc-amber">
                 Keep tokens staked until full time. Unstaking before settlement
                 voids your predictions.
@@ -203,7 +196,9 @@ export function PredictPage() {
                   Locking…
                 </>
               ) : (
-                "Submit predictions 🔒"
+                selectedResult
+                  ? "Submit predictions"
+                  : "Choose a match result to submit"
               )}
             </Button>
           </>
@@ -215,18 +210,79 @@ export function PredictPage() {
 
 function PredictionCard({
   title,
+  optional = false,
   children,
 }: {
   title: string;
+  optional?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Card className="border border-border bg-card">
       <CardContent className="p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          {title}
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {title}
+          </h2>
+          {optional && (
+            <span className="text-xs font-medium text-muted-foreground">
+              Optional
+            </span>
+          )}
+        </div>
         {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PredictionSlip({
+  selectedResult,
+  selectedGoals,
+  selectedScorer,
+  has2x,
+  maxPossible,
+}: {
+  selectedResult: string | null;
+  selectedGoals: string | null;
+  selectedScorer: string | null;
+  has2x: boolean;
+  maxPossible: number;
+}) {
+  return (
+    <Card className="border border-primary/20 bg-primary/5">
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Prediction slip
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Result is required. Goals and scorer can boost the upside.
+            </p>
+          </div>
+          {selectedResult ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-tc-green" />
+          ) : (
+            <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+              Missing result
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <Row label="Result" value={selectedResult ?? "Choose one"} />
+          <Row label="Goals range" value={selectedGoals ?? "Optional"} />
+          <Row label="First scorer" value={selectedScorer ?? "Optional"} />
+          {has2x && (
+            <Row label="Team token bonus" value="2x active" accent="orange" />
+          )}
+        </div>
+
+        <div className="flex justify-between border-t border-primary/15 pt-2 text-sm text-muted-foreground">
+          <span>Max possible this match</span>
+          <span>{maxPossible} pts</span>
+        </div>
       </CardContent>
     </Card>
   );

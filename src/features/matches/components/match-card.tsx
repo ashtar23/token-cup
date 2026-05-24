@@ -2,11 +2,11 @@
 
 import { memo } from "react";
 import Link from "next/link";
+import { ArrowRight, Clock3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { TEAM_FLAG } from "@/lib/constants";
 import type { Match, Prediction } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function formatKickoff(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -16,6 +16,21 @@ function formatKickoff(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getKickoffDistance(iso: string): string {
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return "soon";
+
+  const days = Math.floor(diff / 86_400_000);
+  if (days > 1) return `in ${days}d`;
+  if (days === 1) return "tomorrow";
+
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours > 0) return `in ${hours}h`;
+
+  const minutes = Math.max(1, Math.floor(diff / 60_000));
+  return `in ${minutes}m`;
 }
 
 interface MatchCardProps {
@@ -30,82 +45,84 @@ function MatchCardInner({ match, prediction, heldTokens }: MatchCardProps) {
     (match.away_token && heldTokens.includes(match.away_token));
 
   const alreadyPredicted = !!prediction;
-  const canEnter = !alreadyPredicted && match.status === "upcoming";
+  const href = `/arena/${match.id}`;
+  const actionLabel = alreadyPredicted
+    ? "View prediction"
+    : match.status === "settled"
+      ? "View details"
+      : "Enter arena";
 
   return (
-    <Card className="border border-border bg-card">
-      <CardContent className="p-4 space-y-3">
-        {/* Teams + status */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1 min-w-0">
-            <div className="text-base font-semibold text-foreground">
-              {TEAM_FLAG[match.home_team] ?? "🏳️"} {match.home_team}{" "}
-              <span className="text-muted-foreground font-normal">vs</span>{" "}
-              {TEAM_FLAG[match.away_team] ?? "🏳️"} {match.away_team}
+    <Link
+      href={href}
+      className={cn(
+        "group block rounded-xl border border-border bg-card p-3 transition",
+        "hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md",
+        alreadyPredicted && "border-primary/30 bg-primary/5",
+        has2x && !alreadyPredicted && "border-tc-orange/25",
+      )}
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex min-w-0 items-center gap-1 text-base font-semibold text-foreground">
+              <span className="truncate">
+                {TEAM_FLAG[match.home_team] ?? "🏳️"} {match.home_team}
+              </span>
+              <span className="shrink-0 text-sm font-normal text-muted-foreground">
+                vs
+              </span>
+              <span className="truncate">
+                {TEAM_FLAG[match.away_team] ?? "🏳️"} {match.away_team}
+              </span>
             </div>
-            <div className="text-sm text-muted-foreground">
-              {formatKickoff(match.kickoff_at)}
-              {match.group_name && ` · ${match.group_name}`}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <span>{formatKickoff(match.kickoff_at)}</span>
+              {match.group_name && <span>{match.group_name}</span>}
+              {match.status === "upcoming" && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                  <Clock3 className="h-3 w-3" />
+                  {getKickoffDistance(match.kickoff_at)}
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {match.status === "live" && (
-              <Badge className="bg-tc-green/20 text-tc-green border-tc-green/30 text-sm">
-                Live
-              </Badge>
-            )}
-            {match.status === "upcoming" && (
-              <Badge className="bg-tc-amber/20 text-tc-amber border-tc-amber/30 text-sm">
-                Open
-              </Badge>
-            )}
-            {match.status === "settled" && (
-              <Badge variant="secondary" className="text-sm">
-                Settled
-              </Badge>
-            )}
-            {has2x && (
-              <Badge className="bg-tc-orange/20 text-tc-orange border-tc-orange/30 text-sm">
-                2× Bonus
-              </Badge>
-            )}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <StatusBadges
+              status={match.status}
+              has2x={Boolean(has2x)}
+              alreadyPredicted={alreadyPredicted}
+            />
           </div>
         </div>
 
-        {/* Final score (settled) */}
-        {match.status === "settled" && match.home_score !== null && (
-          <div className="text-sm text-muted-foreground">
-            Final: {match.home_team} {match.home_score} – {match.away_score}{" "}
-            {match.away_team}
-          </div>
-        )}
-
-        {/* Existing prediction summary */}
         {prediction && (
           <PredictionSummary match={match} prediction={prediction} />
         )}
 
-        {canEnter && (
-          <Button
-            asChild
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Link href={`/arena/${match.id}`}>Enter Arena</Link>
-          </Button>
+        {match.status === "settled" && match.home_score !== null && (
+          <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+            Final:{" "}
+            <span className="font-semibold text-foreground">
+              {match.home_score} - {match.away_score}
+            </span>
+          </div>
         )}
-        {!canEnter && match.status === "upcoming" && alreadyPredicted && (
-          <Button asChild variant="outline" className="w-full">
-            <Link href={`/arena/${match.id}`}>View prediction</Link>
-          </Button>
-        )}
-        {match.status === "settled" && (
-          <Button asChild variant="outline" className="w-full">
-            <Link href={`/arena/${match.id}`}>View details</Link>
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+
+        <div
+          className={cn(
+            "flex h-10 items-center justify-between rounded-lg px-3 text-sm font-semibold transition",
+            alreadyPredicted || match.status === "settled"
+              ? "border border-border bg-background text-foreground group-hover:border-primary/50 group-hover:text-primary"
+              : "bg-primary text-primary-foreground group-hover:bg-primary/90",
+          )}
+        >
+          <span>{actionLabel}</span>
+          <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -116,6 +133,41 @@ function MatchCardInner({ match, prediction, heldTokens }: MatchCardProps) {
  * filter changes — so referential equality holds for unchanged cards.
  */
 export const MatchCard = memo(MatchCardInner);
+
+function StatusBadges({
+  status,
+  has2x,
+  alreadyPredicted,
+}: {
+  status: Match["status"];
+  has2x: boolean;
+  alreadyPredicted: boolean;
+}) {
+  return (
+    <>
+      {alreadyPredicted && (
+        <Badge className="border-primary/25 bg-primary/15 text-xs text-primary">
+          Predicted
+        </Badge>
+      )}
+      {status === "live" && (
+        <Badge className="border-tc-green/30 bg-tc-green/20 text-xs text-tc-green">
+          Live
+        </Badge>
+      )}
+      {status === "settled" && (
+        <Badge variant="secondary" className="text-xs">
+          Settled
+        </Badge>
+      )}
+      {has2x && (
+        <Badge className="border-tc-orange/30 bg-tc-orange/20 text-xs text-tc-orange">
+          2x
+        </Badge>
+      )}
+    </>
+  );
+}
 
 function PredictionSummary({
   match,
@@ -132,8 +184,8 @@ function PredictionSummary({
         : "Draw";
 
   return (
-    <div className="rounded-lg bg-muted px-3 py-2 text-sm space-y-0.5">
-      <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">
+    <div className="space-y-0.5 rounded-lg bg-muted/70 px-3 py-2 text-sm">
+      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Your prediction
       </div>
       <div className="text-foreground">

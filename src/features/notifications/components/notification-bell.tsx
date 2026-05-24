@@ -65,7 +65,9 @@ export function NotificationBell() {
             you&apos;ll see it here.
           </div>
         ) : (
-          notifications.map((n) => <NotificationRow key={n.predictionId} n={n} />)
+          notifications.map((n) => (
+            <NotificationRow key={n.predictionId} n={n} />
+          ))
         )}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -108,7 +108,9 @@ export function PredictPage() {
         {isLocked ? (
           <Card className="border border-border bg-card">
             <CardContent className="p-6 text-center space-y-2">
-              <span className="text-3xl" aria-hidden="true">🔒</span>
+              <span className="text-3xl" aria-hidden="true">
+                🔒
+              </span>
               <p className="font-medium text-foreground">Predictions locked</p>
               <p className="text-sm text-muted-foreground">
                 This match has already started.
@@ -181,7 +183,9 @@ export function PredictPage() {
             </Card>
 
             <div className="flex items-start gap-3 rounded-xl border border-tc-amber/30 bg-tc-amber/5 px-4 py-3">
-              <span className="text-lg shrink-0" aria-hidden="true">⚠️</span>
+              <span className="text-lg shrink-0" aria-hidden="true">
+                ⚠️
+              </span>
               <p className="text-sm text-tc-amber">
                 Keep tokens staked until full time. Unstaking before settlement
                 voids your predictions.

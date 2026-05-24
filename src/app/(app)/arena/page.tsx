@@ -1,4 +1,8 @@
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 import { fetchMatches } from "@/features/matches/api/matches-api";
 import { fetchUser } from "@/features/user/api/user-api";
 import { fetchUserPredictions } from "@/features/predictions/api/predictions-api";

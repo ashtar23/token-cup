@@ -8,9 +8,12 @@ import { MatchSection } from "@/features/matches/components/match-section";
 import { MatchFilters } from "@/features/matches/components/match-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useMatches } from "@/features/matches/data-access/queries/use-matches";
+import { useSyncMatches } from "@/features/matches/data-access/mutations/use-sync-matches";
 import { useUserPredictions } from "@/features/predictions/data-access/queries/use-user-predictions";
 import { useUserTokens } from "@/features/user/data-access/queries/use-user-tokens";
+import { useUpsertUserToken } from "@/features/user/data-access/mutations/use-token-mutations";
 import { useUser } from "@/features/user/data-access/queries/use-user";
 import { getHeldTokenSymbols } from "@/features/user/lib/tokens";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
@@ -24,6 +27,8 @@ export function ArenaHubPage() {
   const { data: predictionsArr = [], isLoading: predsLoading } =
     useUserPredictions();
   const { data: userTokens = [] } = useUserTokens();
+  const syncMatches = useSyncMatches();
+  const upsertToken = useUpsertUserToken();
 
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,13 +106,32 @@ export function ArenaHubPage() {
             title="No matches synced yet"
             description="Pull the latest WC 2026 fixtures from football-data.org to start playing."
             action={
-              <Button asChild variant="outline">
-                <Link href="/dev">Open Dev Panel</Link>
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={() => syncMatches.mutate()}
+                  disabled={syncMatches.isPending}
+                >
+                  {syncMatches.isPending ? "Syncing..." : "Sync fixtures"}
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/dev">Open demo controls</Link>
+                </Button>
+              </div>
             }
           />
         ) : (
           <>
+            {userTokens.length === 0 && (
+              <DemoTokenSetup
+                isPending={upsertToken.isPending}
+                onApply={async () => {
+                  await upsertToken.mutateAsync({ symbol: "ARG", amount: 120 });
+                  await upsertToken.mutateAsync({ symbol: "BRA", amount: 80 });
+                  await upsertToken.mutateAsync({ symbol: "CHZ", amount: 200 });
+                }}
+              />
+            )}
+
             <MatchFilters
               groups={availableGroups}
               selectedGroup={selectedGroup}
@@ -196,6 +220,33 @@ export function ArenaHubPage() {
         )}
       </div>
     </>
+  );
+}
+
+function DemoTokenSetup({
+  isPending,
+  onApply,
+}: {
+  isPending: boolean;
+  onApply: () => void | Promise<void>;
+}) {
+  return (
+    <Card className="border border-tc-orange/25 bg-tc-orange/5">
+      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Add demo Fan Tokens
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Start with ARG, BRA, and CHZ stake so bonuses and eligibility light
+            up.
+          </p>
+        </div>
+        <Button onClick={onApply} disabled={isPending} className="shrink-0">
+          {isPending ? "Adding..." : "Add demo stake"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

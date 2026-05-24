@@ -21,14 +21,19 @@ export function LeaderboardShell({ children }: { children: React.ReactNode }) {
 
       <div className="mx-auto max-w-3xl w-full px-4 py-6 space-y-6">
         {/* Prize banner — stays mounted across tab switches */}
-        <Card className="border border-border bg-card">
+        <Card className="overflow-hidden border border-primary/20 bg-card">
           <CardContent className="p-4">
+            <div className="mb-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Token Cup prizes
+              </p>
+            </div>
             <div className="grid grid-cols-2 divide-x divide-border">
               <div className="text-center pr-4">
                 <p className="text-xs text-muted-foreground mb-1">
                   Match winner
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xl font-bold text-foreground">
                   {MATCH_WIN_POINTS.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">reward pts</p>
@@ -37,7 +42,7 @@ export function LeaderboardShell({ children }: { children: React.ReactNode }) {
                 <p className="text-xs text-muted-foreground mb-1">
                   Tournament winner
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xl font-bold text-foreground">
                   {TOURNAMENT_WIN_POINTS.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">reward pts</p>
@@ -64,7 +69,7 @@ export function LeaderboardShell({ children }: { children: React.ReactNode }) {
                 role="tab"
                 aria-selected={isActive}
                 className={cn(
-                  "inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-base font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isActive
                     ? "bg-background text-foreground shadow-sm"
                     : "hover:text-foreground",

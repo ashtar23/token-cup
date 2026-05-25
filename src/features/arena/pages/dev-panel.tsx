@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  RadioTower,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +25,7 @@ import {
 } from "@/features/user/data-access/mutations/use-token-mutations";
 import { useSettleMatch } from "@/features/predictions/data-access/mutations/use-settle-match";
 import { useDeleteAllPredictions } from "@/features/predictions/data-access/mutations/use-delete-predictions";
+import { useSeedFanPulse } from "@/features/predictions/data-access/mutations/use-seed-fan-pulse";
 import { getTotalStaked } from "@/features/user/lib/tokens";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 
@@ -38,6 +45,7 @@ export function DevPanel() {
   const syncMatches = useSyncMatches();
   const settleMatch = useSettleMatch();
   const resetPredictions = useDeleteAllPredictions();
+  const seedFanPulse = useSeedFanPulse();
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const totalStaked = getTotalStaked(userTokens);
@@ -62,9 +70,13 @@ export function DevPanel() {
       </InsetHeader>
 
       <div className="mx-auto max-w-3xl w-full px-4 py-6 space-y-8">
-        {feedback && <FeedbackBanner feedback={feedback} onDismiss={() => setFeedback(null)} />}
+        {feedback && (
+          <FeedbackBanner
+            feedback={feedback}
+            onDismiss={() => setFeedback(null)}
+          />
+        )}
 
-        {/* ── Per-user section ─────────────────────────────────────────── */}
         <Section
           label="Your account"
           description="These actions only affect the currently connected user."
@@ -103,8 +115,8 @@ export function DevPanel() {
                 Reset predictions
               </p>
               <p className="text-xs text-muted-foreground">
-                Deletes every prediction tied to this UUID so you can replay
-                the demo. Other users are unaffected.
+                Deletes every prediction tied to this UUID so you can replay the
+                demo. Other users are unaffected.
               </p>
               <Button
                 variant="outline"
@@ -131,7 +143,6 @@ export function DevPanel() {
           </Card>
         </Section>
 
-        {/* ── Global section ───────────────────────────────────────────── */}
         <Section
           label="Tournament"
           description="These actions affect every user. Settling a match scores it across the entire leaderboard."
@@ -154,14 +165,29 @@ export function DevPanel() {
             isPending={settleMatch.isPending}
           />
 
+          <SeedFanPulseCard
+            matchOptions={matchOptions}
+            onSeed={(matchId) =>
+              seedFanPulse.mutate(matchId, {
+                onSuccess: (data) =>
+                  setFeedback({
+                    type: "ok",
+                    text: `Seeded ${data.seeded} Fan Pulse picks`,
+                  }),
+                onError: (e) => setFeedback({ type: "err", text: e.message }),
+              })
+            }
+            isPending={seedFanPulse.isPending}
+          />
+
           <Card>
             <CardContent className="p-5 space-y-3">
               <p className="text-base font-semibold text-foreground">
                 Sync fixtures
               </p>
               <p className="text-xs text-muted-foreground">
-                Pulls latest WC 2026 match data from football-data.org.
-                Updates the shared matches table.
+                Pulls latest WC 2026 match data from football-data.org. Updates
+                the shared matches table.
               </p>
               <Button
                 variant="outline"
@@ -179,7 +205,9 @@ export function DevPanel() {
                   })
                 }
               >
-                <RefreshCw className={syncMatches.isPending ? "animate-spin" : ""} />
+                <RefreshCw
+                  className={syncMatches.isPending ? "animate-spin" : ""}
+                />
                 {syncMatches.isPending ? "Syncing…" : "Sync matches"}
               </Button>
             </CardContent>
@@ -262,9 +290,7 @@ function MockUserCard({
         <Row
           label="User ID"
           value={
-            <span className="font-mono text-xs break-all">
-              {userId ?? "—"}
-            </span>
+            <span className="font-mono text-xs break-all">{userId ?? "—"}</span>
           }
         />
         <Row label="Fantasy name" value={user?.fantasy_name ?? "—"} />
@@ -429,10 +455,58 @@ function SettleMatchCard({
             placeholder="Away"
             className="w-20"
           />
-          <Button onClick={handleSettle} disabled={isPending} className="flex-1">
+          <Button
+            onClick={handleSettle}
+            disabled={isPending}
+            className="flex-1"
+          >
             {isPending ? "Settling…" : "Settle"}
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface SeedFanPulseProps {
+  matchOptions: ComboboxOption[];
+  onSeed: (matchId: string) => void;
+  isPending: boolean;
+}
+
+function SeedFanPulseCard({
+  matchOptions,
+  onSeed,
+  isPending,
+}: SeedFanPulseProps) {
+  const [matchId, setMatchId] = useState("");
+
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-3">
+        <p className="text-base font-semibold text-foreground">
+          Seed Fan Pulse
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Adds a generated demo crowd with locked predictions for one match so
+          Fan Pulse has a visible split during judging.
+        </p>
+        <Combobox
+          options={matchOptions}
+          value={matchId}
+          onChange={setMatchId}
+          placeholder="Pick a match…"
+          searchPlaceholder="Search teams or status…"
+        />
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={!matchId || isPending}
+          onClick={() => onSeed(matchId)}
+        >
+          <RadioTower className={isPending ? "animate-pulse" : ""} />
+          {isPending ? "Seeding…" : "Seed Fan Pulse picks"}
+        </Button>
       </CardContent>
     </Card>
   );
@@ -450,7 +524,11 @@ function Row({
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className={bold ? "font-bold text-foreground" : "font-medium text-foreground"}>
+      <span
+        className={
+          bold ? "font-bold text-foreground" : "font-medium text-foreground"
+        }
+      >
         {value}
       </span>
     </div>

@@ -11,6 +11,7 @@ import { SquadsSection } from "@/features/arena/components/match-detail/squads-s
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { useMatch } from "@/features/matches/data-access/queries/use-match";
 import { usePrediction } from "@/features/predictions/data-access/queries/use-prediction";
+import { FanPulseCard } from "@/features/predictions/components/fan-pulse-card";
 import { useUserTokens } from "@/features/user/data-access/queries/use-user-tokens";
 import {
   getHeldTokenSymbols,
@@ -49,6 +50,11 @@ export function MatchDetailPage() {
         {prediction && (
           <PredictionRecap match={match} prediction={prediction} />
         )}
+        <FanPulseCard
+          match={match}
+          prediction={prediction ?? null}
+          heldTokenSymbols={heldTokens}
+        />
         <SquadsSection match={match} />
         <ActionRow
           match={match}

@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  fanPulseQueryKey,
   predictionQueryKey,
   userPredictionsQueryKey,
 } from "../keys";
@@ -39,6 +40,9 @@ export function useSubmitPrediction() {
       });
       queryClient.invalidateQueries({
         queryKey: userPredictionsQueryKey(userId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: fanPulseQueryKey(vars.matchId),
       });
     },
   });

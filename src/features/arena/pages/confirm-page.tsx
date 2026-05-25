@@ -9,6 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { useMatch } from "@/features/matches/data-access/queries/use-match";
 import { usePrediction } from "@/features/predictions/data-access/queries/use-prediction";
+import { FanPulseCard } from "@/features/predictions/components/fan-pulse-card";
+import { useUserTokens } from "@/features/user/data-access/queries/use-user-tokens";
+import { getHeldTokenSymbols } from "@/features/user/lib/tokens";
 import { STREAK_THRESHOLD, MATCH_WIN_POINTS, TEAM_FLAG } from "@/lib/constants";
 import type { Prediction, Match } from "@/lib/types";
 
@@ -18,6 +21,7 @@ export function ConfirmPage() {
 
   const { data: match, isLoading: matchLoading } = useMatch(matchId);
   const { data: prediction, isLoading: predLoading } = usePrediction(matchId);
+  const { data: userTokens = [] } = useUserTokens();
 
   if (matchLoading || predLoading || !match) {
     return (
@@ -40,6 +44,8 @@ export function ConfirmPage() {
     );
   }
 
+  const heldTokens = getHeldTokenSymbols(userTokens);
+
   return (
     <>
       <InsetHeader title="Predictions locked" backHref="/arena">
@@ -52,6 +58,12 @@ export function ConfirmPage() {
         <Hero match={match} />
         <StatsGrid prediction={prediction} />
         <SummaryCard match={match} prediction={prediction} />
+        <FanPulseCard
+          match={match}
+          prediction={prediction}
+          heldTokenSymbols={heldTokens}
+          variant="compact"
+        />
         <StakeWarning />
         <PrizeRow />
         <Actions matchId={match.id} />
@@ -66,7 +78,9 @@ function Hero({ match }: { match: Match }) {
       <div className="flex items-center justify-center w-16 h-16 rounded-full bg-tc-green/10 border-2 border-tc-green">
         <Check className="h-8 w-8 text-tc-green" />
       </div>
-      <h1 className="text-2xl font-bold text-foreground">Predictions locked!</h1>
+      <h1 className="text-2xl font-bold text-foreground">
+        Predictions locked!
+      </h1>
       <p className="text-sm text-muted-foreground">
         {TEAM_FLAG[match.home_team] ?? "🏳️"} {match.home_team} vs{" "}
         {TEAM_FLAG[match.away_team] ?? "🏳️"} {match.away_team} · Good luck!
@@ -85,7 +99,10 @@ function StatsGrid({ prediction }: { prediction: Prediction }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       <StatCard label="Picks made" value={predictionsCount} />
-      <StatCard label="Multiplier" value={prediction.has_2x_bonus ? "2×" : "1×"} />
+      <StatCard
+        label="Multiplier"
+        value={prediction.has_2x_bonus ? "2×" : "1×"}
+      />
       <StatCard label="Streak" value={prediction.streak_count} />
     </div>
   );
@@ -207,7 +224,9 @@ function Actions({ matchId }: { matchId: string }) {
         asChild
         className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12"
       >
-        <Link href={`/leaderboard/match?match=${matchId}`}>View leaderboard</Link>
+        <Link href={`/leaderboard/match?match=${matchId}`}>
+          View leaderboard
+        </Link>
       </Button>
       <Button asChild variant="outline" className="flex-1 h-12">
         <Link href="/arena">Back to hub</Link>

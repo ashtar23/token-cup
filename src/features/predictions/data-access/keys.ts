@@ -3,3 +3,6 @@ export const userPredictionsQueryKey = (userId: string) =>
 
 export const predictionQueryKey = (userId: string, matchId: string) =>
   ["predictions", "by-match", userId, matchId] as const;
+
+export const fanPulseQueryKey = (matchId: string) =>
+  ["predictions", "fan-pulse", matchId] as const;

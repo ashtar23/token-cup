@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { NavUser } from "@/features/user/components/nav-user";
 
@@ -24,11 +25,20 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+
+  function closeSidebarAfterNavigation() {
+    setOpenMobile(false);
+  }
 
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="gap-2">
-        <Link href="/arena" className="flex items-start gap-2 overflow-hidden">
+        <Link
+          href="/arena"
+          onClick={closeSidebarAfterNavigation}
+          className="flex items-start gap-2 overflow-hidden"
+        >
           <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-base">
             🏆
           </div>
@@ -59,7 +69,10 @@ export function AppSidebar() {
                       isActive={isActive}
                       tooltip={item.title}
                     >
-                      <Link href={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={closeSidebarAfterNavigation}
+                      >
                         <item.icon />
                         <span>{item.title}</span>
                       </Link>

@@ -79,8 +79,8 @@ export function LeaderboardTable({
           className={cn(
             "grid gap-2",
             topThree.length === 1 && "grid-cols-1",
-            topThree.length === 2 && "grid-cols-2",
-            topThree.length >= 3 && "grid-cols-3",
+            topThree.length === 2 && "grid-cols-1 sm:grid-cols-2",
+            topThree.length >= 3 && "grid-cols-1 sm:grid-cols-3",
           )}
         >
           {topThree.map(({ row, rank }) => (
@@ -219,12 +219,7 @@ function RowBadges({
   if (streak < STREAK_THRESHOLD && predictionCount === null) return null;
 
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center gap-1",
-        compact && "mt-2",
-      )}
-    >
+    <div className={cn("flex flex-wrap items-center gap-1", compact && "mt-2")}>
       {streak >= STREAK_THRESHOLD && (
         <span
           className="rounded-full bg-tc-orange/15 px-1.5 py-0.5 text-[10px] font-semibold text-tc-orange"

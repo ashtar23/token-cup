@@ -75,14 +75,7 @@ export function LeaderboardTable({
       )}
 
       {topThree.length > 0 && (
-        <div
-          className={cn(
-            "grid gap-2",
-            topThree.length === 1 && "grid-cols-1",
-            topThree.length === 2 && "grid-cols-1 sm:grid-cols-2",
-            topThree.length >= 3 && "grid-cols-1 sm:grid-cols-3",
-          )}
-        >
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-2">
           {topThree.map(({ row, rank }) => (
             <PodiumCard
               key={row.user_id}

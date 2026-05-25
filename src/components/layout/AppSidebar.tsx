@@ -25,10 +25,10 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   function closeSidebarAfterNavigation() {
-    setOpenMobile(false);
+    if (isMobile) setOpenMobile(false);
   }
 
   return (

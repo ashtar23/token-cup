@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { CalendarClock, Flame, ShieldCheck, Trophy } from "lucide-react";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchSection } from "@/features/matches/components/match-section";
@@ -17,6 +18,7 @@ import { useUpsertUserToken } from "@/features/user/data-access/mutations/use-to
 import { useUser } from "@/features/user/data-access/queries/use-user";
 import { getHeldTokenSymbols } from "@/features/user/lib/tokens";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { TEAM_FLAG } from "@/lib/constants";
 import type { Prediction } from "@/lib/types";
 
 export function ArenaHubPage() {
@@ -60,10 +62,14 @@ export function ArenaHubPage() {
     });
   }, [matches, selectedGroup, searchQuery]);
 
-  // Buckets for the three tabs (all scoped to the current user). Memoized
-  // so child <MatchSection> components can skip re-renders on unrelated
-  // state changes (search keystrokes, etc.).
-  const { open, predicted, settled, predictedLive, predictedUpcoming } =
+  const {
+    open,
+    predicted,
+    settled,
+    results,
+    predictedLive,
+    predictedUpcoming,
+  } =
     useMemo(() => {
       const open = filtered.filter(
         (m) => m.status === "upcoming" && !predictionsMap[m.id],
@@ -74,10 +80,13 @@ export function ArenaHubPage() {
       const settled = filtered.filter(
         (m) => m.status === "settled" && !!predictionsMap[m.id],
       );
+      const results = filtered.filter((m) => m.status === "settled");
+
       return {
         open,
         predicted,
         settled,
+        results,
         predictedLive: predicted.filter((m) => m.status === "live"),
         predictedUpcoming: predicted.filter((m) => m.status === "upcoming"),
       };
@@ -86,6 +95,17 @@ export function ArenaHubPage() {
   const openCount = open.length;
   const predictedCount = predicted.length;
   const settledCount = settled.length;
+  const resultsCount = results.length;
+
+  const briefing = useMemo(
+    () =>
+      buildMatchdayBriefing({
+        open,
+        predictions: predictionsArr,
+        heldTokens,
+      }),
+    [heldTokens, open, predictionsArr],
+  );
 
   if (matchesLoading || userLoading || predsLoading) {
     return (
@@ -140,27 +160,43 @@ export function ArenaHubPage() {
               onSearchChange={setSearchQuery}
             />
 
+            <MatchdayBriefing briefing={briefing} />
+
             <Tabs defaultValue="open">
-              <TabsList className="w-full">
-                <TabsTrigger value="open" className="flex-1 text-base gap-1.5">
-                  Open
-                  <CountBadge>{openCount}</CountBadge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="predicted"
-                  className="flex-1 text-base gap-1.5"
-                >
-                  Predicted
-                  <CountBadge>{predictedCount}</CountBadge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="settled"
-                  className="flex-1 text-base gap-1.5"
-                >
-                  Settled
-                  <CountBadge>{settledCount}</CountBadge>
-                </TabsTrigger>
-              </TabsList>
+              <div className="w-full overflow-hidden rounded-xl bg-muted p-1">
+                <div className="overflow-x-auto">
+                  <TabsList className="w-max min-w-full bg-transparent p-0">
+                    <TabsTrigger
+                      value="open"
+                      className="min-w-28 flex-none gap-1 text-sm sm:min-w-0 sm:flex-1 sm:gap-1.5 sm:text-base"
+                    >
+                      Open
+                      <CountBadge>{openCount}</CountBadge>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="predicted"
+                      className="min-w-32 flex-none gap-1 text-sm sm:min-w-0 sm:flex-1 sm:gap-1.5 sm:text-base"
+                    >
+                      Predicted
+                      <CountBadge>{predictedCount}</CountBadge>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="settled"
+                      className="min-w-28 flex-none gap-1 text-sm sm:min-w-0 sm:flex-1 sm:gap-1.5 sm:text-base"
+                    >
+                      Scored
+                      <CountBadge>{settledCount}</CountBadge>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="results"
+                      className="min-w-28 flex-none gap-1 text-sm sm:min-w-0 sm:flex-1 sm:gap-1.5 sm:text-base"
+                    >
+                      Results
+                      <CountBadge>{resultsCount}</CountBadge>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
 
               <TabsContent value="open" className="mt-5 space-y-6">
                 <MatchSection
@@ -210,8 +246,24 @@ export function ArenaHubPage() {
                 {settledCount === 0 && (
                   <EmptyState
                     icon="🏁"
-                    title="No settled matches yet"
+                    title="No scored predictions yet"
                     description="Your scored predictions will show up here after each full time."
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="results" className="mt-5 space-y-6">
+                <MatchSection
+                  title="Tournament results"
+                  matches={results}
+                  predictions={predictionsMap}
+                  heldTokens={heldTokens}
+                />
+                {resultsCount === 0 && (
+                  <EmptyState
+                    icon="📜"
+                    title="No tournament results yet"
+                    description="Settled matches will stay visible here, even if you did not predict them."
                   />
                 )}
               </TabsContent>
@@ -221,6 +273,160 @@ export function ArenaHubPage() {
       </div>
     </>
   );
+}
+
+interface MatchdayBriefingData {
+  nextOpen: MatchBrief | null;
+  bestBonus: MatchBrief | null;
+  bestStreak: number;
+  openCount: number;
+}
+
+interface MatchBrief {
+  id: string;
+  label: string;
+  meta: string;
+}
+
+function buildMatchdayBriefing({
+  open,
+  predictions,
+  heldTokens,
+}: {
+  open: Array<{
+    id: string;
+    home_team: string;
+    away_team: string;
+    home_token: string | null;
+    away_token: string | null;
+    kickoff_at: string;
+    group_name: string | null;
+  }>;
+  predictions: Prediction[];
+  heldTokens: string[];
+}): MatchdayBriefingData {
+  const byKickoff = [...open].sort(
+    (a, b) =>
+      new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+  );
+  const nextOpen = byKickoff[0] ? toMatchBrief(byKickoff[0]) : null;
+  const bestBonusMatch = byKickoff.find(
+    (match) =>
+      (match.home_token !== null && heldTokens.includes(match.home_token)) ||
+      (match.away_token !== null && heldTokens.includes(match.away_token)),
+  );
+  const bestStreak = Math.max(0, ...predictions.map((p) => p.streak_count));
+
+  return {
+    nextOpen,
+    bestBonus: bestBonusMatch ? toMatchBrief(bestBonusMatch) : null,
+    bestStreak,
+    openCount: open.length,
+  };
+}
+
+function toMatchBrief(match: {
+  id: string;
+  home_team: string;
+  away_team: string;
+  kickoff_at: string;
+  group_name: string | null;
+}): MatchBrief {
+  return {
+    id: match.id,
+    label: `${TEAM_FLAG[match.home_team] ?? "🏳️"} ${match.home_team} vs ${
+      TEAM_FLAG[match.away_team] ?? "🏳️"
+    } ${match.away_team}`,
+    meta: `${formatBriefDate(match.kickoff_at)}${
+      match.group_name ? ` · ${match.group_name}` : ""
+    }`,
+  };
+}
+
+function formatBriefDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function MatchdayBriefing({ briefing }: { briefing: MatchdayBriefingData }) {
+  return (
+    <Card className="border border-primary/20 bg-primary/5">
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Matchday briefing
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Fastest route back into the competition loop.
+            </p>
+          </div>
+          <Trophy className="h-5 w-5 shrink-0 text-primary" />
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          <BriefingTile
+            icon={<CalendarClock className="h-4 w-4" />}
+            label="Next up"
+            value={briefing.nextOpen?.label ?? "No open matches"}
+            meta={briefing.nextOpen?.meta ?? "Check Results for settled fixtures"}
+            href={briefing.nextOpen ? `/arena/${briefing.nextOpen.id}` : undefined}
+          />
+          <BriefingTile
+            icon={<ShieldCheck className="h-4 w-4" />}
+            label="Best 2x chance"
+            value={briefing.bestBonus?.label ?? "No token match found"}
+            meta={briefing.bestBonus?.meta ?? "Add team tokens to unlock bonuses"}
+            href={
+              briefing.bestBonus ? `/arena/${briefing.bestBonus.id}` : undefined
+            }
+          />
+          <BriefingTile
+            icon={<Flame className="h-4 w-4" />}
+            label="Your form"
+            value={`${briefing.bestStreak} streak`}
+            meta={`${briefing.openCount} open ${
+              briefing.openCount === 1 ? "match" : "matches"
+            } available`}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BriefingTile({
+  icon,
+  label,
+  value,
+  meta,
+  href,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  meta: string;
+  href?: string;
+}) {
+  const content = (
+    <div className="h-full rounded-lg border border-border bg-card/70 p-3 transition hover:border-primary/35">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="text-primary">{icon}</span>
+        {label}
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm font-semibold text-foreground">
+        {value}
+      </p>
+      <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{meta}</p>
+    </div>
+  );
+
+  return href ? <Link href={href}>{content}</Link> : content;
 }
 
 function DemoTokenSetup({

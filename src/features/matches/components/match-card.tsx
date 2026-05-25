@@ -101,6 +101,8 @@ function MatchCardInner({ match, prediction, heldTokens }: MatchCardProps) {
           <PredictionSummary match={match} prediction={prediction} />
         )}
 
+        {!prediction && match.status === "settled" && <MissedMatchSummary />}
+
         {match.status === "settled" && match.home_score !== null && (
           <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
             Final:{" "}
@@ -166,6 +168,19 @@ function StatusBadges({
         </Badge>
       )}
     </>
+  );
+}
+
+function MissedMatchSummary() {
+  return (
+    <div className="rounded-lg border border-border bg-background/35 px-3 py-2 text-sm">
+      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        No entry
+      </div>
+      <p className="text-muted-foreground">
+        You did not lock a prediction for this match.
+      </p>
+    </div>
   );
 }
 

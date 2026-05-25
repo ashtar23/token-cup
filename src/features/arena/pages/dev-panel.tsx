@@ -7,6 +7,7 @@ import {
   RadioTower,
   RefreshCw,
   Trash2,
+  WandSparkles,
 } from "lucide-react";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function DevPanel() {
   const seedFanPulse = useSeedFanPulse();
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [preparingDemo, setPreparingDemo] = useState(false);
   const totalStaked = getTotalStaked(userTokens);
 
   const matchOptions: ComboboxOption[] = matches.map((m) => ({
@@ -163,6 +165,45 @@ export function DevPanel() {
               )
             }
             isPending={settleMatch.isPending}
+          />
+
+          <PrepareDemoCard
+            matchOptions={matchOptions}
+            isPending={preparingDemo}
+            onPrepare={async (matchId) => {
+              const match = matches.find((m) => m.id === matchId);
+              if (!match) return;
+
+              setPreparingDemo(true);
+              try {
+                const symbols = Array.from(
+                  new Set(
+                    ["CHZ", match.home_token, match.away_token].filter(
+                      (token): token is string => Boolean(token),
+                    ),
+                  ),
+                );
+
+                for (const symbol of symbols) {
+                  await upsertToken.mutateAsync({ symbol, amount: 650 });
+                }
+                const data = await seedFanPulse.mutateAsync(matchId);
+
+                setFeedback({
+                  type: "ok",
+                  text: `Prepared demo match with ${symbols.join(
+                    ", ",
+                  )} stake and ${data.seeded} Fan Pulse picks`,
+                });
+              } catch (e) {
+                setFeedback({
+                  type: "err",
+                  text: e instanceof Error ? e.message : "Demo prep failed",
+                });
+              } finally {
+                setPreparingDemo(false);
+              }
+            }}
           />
 
           <SeedFanPulseCard
@@ -463,6 +504,49 @@ function SettleMatchCard({
             {isPending ? "Settling…" : "Settle"}
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface PrepareDemoProps {
+  matchOptions: ComboboxOption[];
+  onPrepare: (matchId: string) => Promise<void>;
+  isPending: boolean;
+}
+
+function PrepareDemoCard({
+  matchOptions,
+  onPrepare,
+  isPending,
+}: PrepareDemoProps) {
+  const [matchId, setMatchId] = useState("");
+
+  return (
+    <Card className="border-primary/25 bg-primary/5">
+      <CardContent className="p-5 space-y-3">
+        <p className="text-base font-semibold text-foreground">
+          Prepare judge demo
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Adds useful stake for the connected user and a generated Fan Pulse
+          crowd for the selected match.
+        </p>
+        <Combobox
+          options={matchOptions}
+          value={matchId}
+          onChange={setMatchId}
+          placeholder="Pick a match…"
+          searchPlaceholder="Search teams or status…"
+        />
+        <Button
+          className="w-full"
+          disabled={!matchId || isPending}
+          onClick={() => void onPrepare(matchId)}
+        >
+          <WandSparkles className={isPending ? "animate-pulse" : ""} />
+          {isPending ? "Preparing…" : "Prepare this match"}
+        </Button>
       </CardContent>
     </Card>
   );

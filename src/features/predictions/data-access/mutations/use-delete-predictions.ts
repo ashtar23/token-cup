@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { userPredictionsQueryKey } from "../keys";
+import { achievementsQueryKey } from "@/features/achievements/data-access/keys";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 
 const LEADERBOARD_PREFIX = ["leaderboard"] as const;
@@ -24,10 +25,14 @@ export function useDeleteAllPredictions() {
       if (!res.ok) throw new Error(data.error ?? "Prediction reset failed");
     },
     onSuccess: () => {
-      if (userId)
+      if (userId) {
         queryClient.invalidateQueries({
           queryKey: userPredictionsQueryKey(userId),
         });
+        queryClient.invalidateQueries({
+          queryKey: achievementsQueryKey(userId),
+        });
+      }
       queryClient.invalidateQueries({ queryKey: LEADERBOARD_PREFIX });
     },
   });

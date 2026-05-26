@@ -6,6 +6,8 @@ import {
   predictionQueryKey,
   userPredictionsQueryKey,
 } from "../keys";
+import { syncAchievementUnlocks } from "@/features/achievements/data-access/client-achievement-sync";
+import type { AchievementUnlockPayload } from "@/features/achievements/lib/achievement-unlock";
 import { useCurrentUserId } from "@/providers/UserSessionProvider";
 import type { PredictedResult, GoalsRange } from "@/lib/types";
 
@@ -25,7 +27,10 @@ async function submitPrediction(input: SubmitPredictionInput) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Submission failed");
-  return data;
+  return data as {
+    success: true;
+    unlockedAchievements?: AchievementUnlockPayload[];
+  };
 }
 
 export function useSubmitPrediction() {
@@ -33,7 +38,7 @@ export function useSubmitPrediction() {
   const userId = useCurrentUserId();
   return useMutation({
     mutationFn: submitPrediction,
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
       if (!userId) return;
       queryClient.invalidateQueries({
         queryKey: predictionQueryKey(userId, vars.matchId),
@@ -43,6 +48,11 @@ export function useSubmitPrediction() {
       });
       queryClient.invalidateQueries({
         queryKey: fanPulseQueryKey(vars.matchId),
+      });
+      syncAchievementUnlocks({
+        queryClient,
+        userId,
+        unlocks: data.unlockedAchievements,
       });
     },
   });

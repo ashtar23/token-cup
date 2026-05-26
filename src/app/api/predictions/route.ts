@@ -9,13 +9,16 @@ export async function DELETE() {
   }
 
   const supabase = createServerSupabaseClient();
-  const { error } = await supabase
-    .from("predictions")
-    .delete()
-    .eq("user_id", userId);
+  const [{ error }, { error: achievementError }, { error: eventError }] =
+    await Promise.all([
+      supabase.from("predictions").delete().eq("user_id", userId),
+      supabase.from("user_achievements").delete().eq("user_id", userId),
+      supabase.from("achievement_events").delete().eq("user_id", userId),
+    ]);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const failed = error ?? achievementError ?? eventError;
+  if (failed) {
+    return NextResponse.json({ error: failed.message }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

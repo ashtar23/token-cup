@@ -1,7 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { syncAchievementUnlocks } from "@/features/achievements/data-access/client-achievement-sync";
+import type { AchievementUnlockPayload } from "@/features/achievements/lib/achievement-unlock";
 import { MATCHES_QUERY_KEY } from "@/features/matches/data-access/keys";
+import { useCurrentUserId } from "@/providers/UserSessionProvider";
 
 // Settle affects every user who predicted the match, so we invalidate by
 // the broad prefixes. TanStack Query does prefix matching — these catch
@@ -23,17 +26,26 @@ async function settleMatch(input: SettleMatchInput) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Settle failed");
-  return data as { settled: number };
+  return data as {
+    settled: number;
+    unlockedAchievements?: AchievementUnlockPayload[];
+  };
 }
 
 export function useSettleMatch() {
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
   return useMutation({
     mutationFn: settleMatch,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: MATCHES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PREDICTIONS_PREFIX });
       queryClient.invalidateQueries({ queryKey: LEADERBOARD_PREFIX });
+      syncAchievementUnlocks({
+        queryClient,
+        userId,
+        unlocks: data.unlockedAchievements,
+      });
     },
   });
 }

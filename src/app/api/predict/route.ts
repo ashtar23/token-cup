@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerUserId } from "@/lib/user-session.server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import {
+  recordAchievementEvent,
+  toAchievementUnlockPayload,
+} from "@/features/achievements/lib/achievement-service";
 import { getStakeEligibility } from "@/features/user/lib/stake-eligibility";
+import type { PredictedResult } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const userId = await getServerUserId();
@@ -133,5 +138,53 @@ export async function POST(req: NextRequest) {
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ success: true });
+  const [{ count: predictionCount }, fanPulseLeader] = await Promise.all([
+    supabase
+      .from("predictions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    getFanPulseLeader(supabase, matchId),
+  ]);
+
+  const unlockedAchievements = await recordAchievementEvent(supabase, {
+    type: "PREDICTION_LOCKED",
+    userId,
+    sourceId: matchId,
+    payload: {
+      predictionCount: predictionCount ?? 0,
+      has2xBonus: !!has2x,
+      predictedResult,
+      kickoffAt: match.kickoff_at,
+      fanPulseLeader,
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    unlockedAchievements: unlockedAchievements.map(toAchievementUnlockPayload),
+  });
+}
+
+async function getFanPulseLeader(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  matchId: string,
+): Promise<PredictedResult | null> {
+  const { data } = await supabase
+    .from("predictions")
+    .select("predicted_result")
+    .eq("match_id", matchId);
+
+  const rows = (data ?? []) as { predicted_result: PredictedResult }[];
+  if (rows.length < 3) return null;
+
+  const counts: Record<PredictedResult, number> = {
+    home_win: 0,
+    draw: 0,
+    away_win: 0,
+  };
+  for (const row of rows) counts[row.predicted_result]++;
+
+  return (Object.entries(counts) as [PredictedResult, number][]).sort(
+    (a, b) => b[1] - a[1],
+  )[0][0];
 }

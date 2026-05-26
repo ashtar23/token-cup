@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, LayoutGrid } from "lucide-react";
+import { Award, Trophy, LayoutGrid } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,11 +16,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { areAchievementsEnabled } from "@/features/achievements/lib/achievement-flags";
 import { NavUser } from "@/features/user/components/nav-user";
 
 const NAV_ITEMS = [
   { title: "Arena", href: "/arena", icon: LayoutGrid },
   { title: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  ...(areAchievementsEnabled()
+    ? [{ title: "Achievements", href: "/achievements", icon: Award }]
+    : []),
 ] as const;
 
 export function AppSidebar() {
@@ -61,7 +65,7 @@ export function AppSidebar() {
               {NAV_ITEMS.map((item) => {
                 const isActive =
                   pathname === item.href ||
-                  (item.href === "/arena" && pathname.startsWith("/arena"));
+                  pathname.startsWith(`${item.href}/`);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton

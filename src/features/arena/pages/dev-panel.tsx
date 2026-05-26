@@ -526,7 +526,7 @@ function PrepareDemoCard({
     <Card className="border-primary/25 bg-primary/5">
       <CardContent className="p-5 space-y-3">
         <p className="text-base font-semibold text-foreground">
-          Prepare judge demo
+          Fan Pulse Crowd
         </p>
         <p className="text-xs text-muted-foreground">
           Adds useful stake for the connected user and a generated Fan Pulse

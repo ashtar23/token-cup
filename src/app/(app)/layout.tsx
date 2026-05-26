@@ -6,7 +6,9 @@ import {
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AchievementToastHost } from "@/features/achievements/components/achievement-toast-host";
 import { fetchUser } from "@/features/user/api/user-api";
 import { userQueryKey } from "@/features/user/data-access/keys";
 import { getServerUserId } from "@/lib/user-session.server";
@@ -40,6 +42,8 @@ export default async function AppLayout({
         <SidebarInset className="md:peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] md:peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon))] w-full md:w-auto overflow-hidden">
           {children}
         </SidebarInset>
+        <AchievementToastHost />
+        <Toaster />
       </SidebarProvider>
     </HydrationBoundary>
   );

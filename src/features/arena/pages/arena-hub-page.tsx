@@ -28,7 +28,7 @@ export function ArenaHubPage() {
   const { isLoading: userLoading } = useUser();
   const { data: predictionsArr = [], isLoading: predsLoading } =
     useUserPredictions();
-  const { data: userTokens = [] } = useUserTokens();
+  const { data: userTokens = [], isLoading: tokensLoading } = useUserTokens();
   const syncMatches = useSyncMatches();
   const upsertToken = useUpsertUserToken();
 
@@ -107,7 +107,7 @@ export function ArenaHubPage() {
     [heldTokens, open, predictionsArr],
   );
 
-  if (matchesLoading || userLoading || predsLoading) {
+  if (matchesLoading || userLoading || predsLoading || tokensLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="spinner mx-auto" />

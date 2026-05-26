@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { MatchFilters } from "@/features/matches/components/match-filters";
@@ -10,6 +9,7 @@ import { ArenaMatchTabs } from "@/features/arena/components/arena-hub/arena-matc
 import { DemoTokenSetup } from "@/features/arena/components/arena-hub/demo-token-setup";
 import { MatchdayBriefing } from "@/features/arena/components/arena-hub/matchday-briefing";
 import { useArenaHubState } from "@/features/arena/hooks/use-arena-hub-state";
+import { useArenaViewParams } from "@/features/arena/hooks/use-arena-view-params";
 import { useMatches } from "@/features/matches/data-access/queries/use-matches";
 import { useSyncMatches } from "@/features/matches/data-access/mutations/use-sync-matches";
 import { useUserPredictions } from "@/features/predictions/data-access/queries/use-user-predictions";
@@ -29,8 +29,7 @@ export function ArenaHubPage() {
   const syncMatches = useSyncMatches();
   const upsertToken = useUpsertUserToken();
 
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const view = useArenaViewParams();
 
   const {
     availableGroups,
@@ -41,8 +40,8 @@ export function ArenaHubPage() {
   } = useArenaHubState({
     matches,
     predictions,
-    selectedGroup,
-    searchQuery,
+    selectedGroup: view.group,
+    searchQuery: view.search,
     userTokens,
   });
 
@@ -97,10 +96,10 @@ export function ArenaHubPage() {
 
             <MatchFilters
               groups={availableGroups}
-              selectedGroup={selectedGroup}
-              onGroupChange={setSelectedGroup}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
+              selectedGroup={view.group}
+              onGroupChange={view.setGroup}
+              searchQuery={view.searchInput}
+              onSearchChange={view.setSearch}
             />
 
             <MatchdayBriefing briefing={briefing} />
@@ -108,7 +107,9 @@ export function ArenaHubPage() {
             <ArenaMatchTabs
               heldTokens={heldTokens}
               matchGroups={matchGroups}
+              onTabChange={view.setTab}
               predictionsByMatchId={predictionsByMatchId}
+              tab={view.tab}
             />
           </>
         )}

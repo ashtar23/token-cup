@@ -3,16 +3,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchSection } from "@/features/matches/components/match-section";
 import type { Prediction } from "@/lib/types";
 import type { ArenaMatchGroups } from "../../lib/arena-hub";
+import { isArenaTab, type ArenaTab } from "../../lib/arena-view-params";
 import type { ReactNode } from "react";
 
 export function ArenaMatchTabs({
   heldTokens,
   matchGroups,
+  onTabChange,
   predictionsByMatchId,
+  tab,
 }: {
   heldTokens: string[];
   matchGroups: ArenaMatchGroups;
+  onTabChange: (tab: ArenaTab) => void;
   predictionsByMatchId: Record<string, Prediction>;
+  tab: ArenaTab;
 }) {
   const counts = {
     open: matchGroups.open.length,
@@ -22,7 +27,12 @@ export function ArenaMatchTabs({
   };
 
   return (
-    <Tabs defaultValue="open">
+    <Tabs
+      value={tab}
+      onValueChange={(value) => {
+        if (isArenaTab(value)) onTabChange(value);
+      }}
+    >
       <div className="w-full overflow-hidden rounded-xl bg-muted p-1">
         <div className="overflow-x-auto">
           <TabsList className="w-max min-w-full bg-transparent p-0">

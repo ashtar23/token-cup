@@ -126,6 +126,8 @@ function evaluateAchievementIds(event: AchievementEvent): AchievementId[] {
       (new Date(event.payload.kickoffAt).getTime() - Date.now()) / 86_400_000;
 
     if (event.payload.predictionCount === 1) ids.push("first_lock");
+    if (event.payload.predictionCount >= 3) ids.push("three_locks");
+    if (event.payload.predictionCount >= 10) ids.push("fixture_regular");
     if (event.payload.has2xBonus) ids.push("token_backer");
     if (daysUntilKickoff >= 7) ids.push("early_caller");
     if (event.payload.fanPulseLeader !== null) {
@@ -142,16 +144,26 @@ function evaluateAchievementIds(event: AchievementEvent): AchievementId[] {
   const ids: AchievementId[] = [];
   if (!event.payload.isVoided) ids.push("diamond_hands");
   if (event.payload.pointsEarned > 0) ids.push("points_on_board");
+  if (event.payload.tournamentPoints >= 100) ids.push("centurion");
   if (event.payload.correctResult && event.payload.correctGoalsRange) {
     ids.push("perfect_read");
   }
+  if (event.payload.pointsEarned >= 200) ids.push("big_haul");
   if (event.payload.pointsEarned > 0 && event.payload.has2xBonus) {
     ids.push("token_captain");
   }
   if (event.payload.streakCount >= 3) ids.push("on_fire");
+  if (
+    event.payload.pointsEarned > 0 &&
+    event.payload.has2xBonus &&
+    event.payload.streakCount >= 3
+  ) {
+    ids.push("multiplier_stack");
+  }
   if (event.payload.matchRank !== null && event.payload.matchRank <= 3) {
     ids.push("podium_threat");
   }
+  if (event.payload.matchRank === 1) ids.push("match_winner");
   if (event.payload.tournamentPoints >= 500) ids.push("tournament_climber");
 
   return ids;

@@ -9,16 +9,22 @@ export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
 
 export type AchievementId =
   | "first_lock"
+  | "three_locks"
+  | "fixture_regular"
   | "token_backer"
   | "early_caller"
   | "crowd_rider"
   | "contrarian"
   | "points_on_board"
+  | "centurion"
   | "perfect_read"
+  | "big_haul"
   | "diamond_hands"
   | "on_fire"
+  | "multiplier_stack"
   | "token_captain"
   | "podium_threat"
+  | "match_winner"
   | "tournament_climber";
 
 export interface AchievementDefinition {
@@ -42,6 +48,26 @@ export const ACHIEVEMENT_DEFINITIONS = [
     points: 10,
     rarity: "common",
     sortOrder: 10,
+  },
+  {
+    id: "three_locks",
+    title: "Hat-Trick Caller",
+    description: "Lock predictions for three different matches.",
+    category: "prediction",
+    icon: "🎩",
+    points: 20,
+    rarity: "common",
+    sortOrder: 15,
+  },
+  {
+    id: "fixture_regular",
+    title: "Fixture Regular",
+    description: "Lock ten match predictions.",
+    category: "prediction",
+    icon: "📅",
+    points: 45,
+    rarity: "epic",
+    sortOrder: 18,
   },
   {
     id: "token_backer",
@@ -94,6 +120,16 @@ export const ACHIEVEMENT_DEFINITIONS = [
     sortOrder: 60,
   },
   {
+    id: "centurion",
+    title: "Centurion",
+    description: "Reach 100 total tournament points.",
+    category: "leaderboard",
+    icon: "💯",
+    points: 30,
+    rarity: "rare",
+    sortOrder: 65,
+  },
+  {
     id: "perfect_read",
     title: "Perfect Read",
     description: "Correctly predict both result and goals range.",
@@ -102,6 +138,16 @@ export const ACHIEVEMENT_DEFINITIONS = [
     points: 40,
     rarity: "rare",
     sortOrder: 70,
+  },
+  {
+    id: "big_haul",
+    title: "Big Haul",
+    description: "Earn at least 200 points from one settled match.",
+    category: "settlement",
+    icon: "💎",
+    points: 50,
+    rarity: "epic",
+    sortOrder: 75,
   },
   {
     id: "diamond_hands",
@@ -124,6 +170,16 @@ export const ACHIEVEMENT_DEFINITIONS = [
     sortOrder: 90,
   },
   {
+    id: "multiplier_stack",
+    title: "Multiplier Stack",
+    description: "Score with both a team-token bonus and an active streak.",
+    category: "streak",
+    icon: "🚀",
+    points: 75,
+    rarity: "legendary",
+    sortOrder: 95,
+  },
+  {
     id: "token_captain",
     title: "Token Captain",
     description: "Earn points from a prediction with a team-token bonus.",
@@ -142,6 +198,16 @@ export const ACHIEVEMENT_DEFINITIONS = [
     points: 60,
     rarity: "epic",
     sortOrder: 110,
+  },
+  {
+    id: "match_winner",
+    title: "Match Winner",
+    description: "Finish first on a match leaderboard.",
+    category: "leaderboard",
+    icon: "🥇",
+    points: 90,
+    rarity: "legendary",
+    sortOrder: 115,
   },
   {
     id: "tournament_climber",

@@ -21,7 +21,10 @@ import {
   useLastMatchEntry,
   useMatchEntry,
 } from "@/features/user/data-access/queries/use-last-match-entry";
-import { getTotalStaked, getHeldTokenSymbols } from "@/features/user/lib/tokens";
+import {
+  getTotalStaked,
+  getHeldTokenSymbols,
+} from "@/features/user/lib/tokens";
 import { getStakeEligibility } from "@/features/user/lib/stake-eligibility";
 import { TEAM_FLAG } from "@/lib/constants";
 
@@ -35,7 +38,8 @@ export function VerifyPage() {
     isLoading: tokensLoading,
     refetch: refetchTokens,
   } = useUserTokens();
-  const { data: lastEntry, isLoading: entryLoading } = useLastMatchEntry(matchId);
+  const { data: lastEntry, isLoading: entryLoading } =
+    useLastMatchEntry(matchId);
   const { data: thisMatchEntry, isLoading: thisEntryLoading } =
     useMatchEntry(matchId);
 
@@ -51,12 +55,12 @@ export function VerifyPage() {
   }
 
   const totalStaked = getTotalStaked(userTokens);
-  const alreadyEntered = !!thisMatchEntry;
   const eligibility = getStakeEligibility({
-    alreadyEntered,
+    currentEntry: thisMatchEntry ?? null,
     previousEntry: lastEntry ?? null,
     totalStaked,
   });
+  const alreadyEntered = eligibility.existingStakeSnapshot !== null;
   const eligible = eligibility.eligible;
   const shortfall = Math.max(0, eligibility.requiredStake - totalStaked);
   const stakeProgress =
@@ -185,7 +189,7 @@ export function VerifyPage() {
               {alreadyEntered ? (
                 <>
                   <span className="font-medium">Already entered.</span> Your
-                  predictions are locked in.
+                  stake still matches the locked snapshot.
                 </>
               ) : (
                 <>
@@ -201,11 +205,15 @@ export function VerifyPage() {
           <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
             <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <p className="text-sm text-foreground">
-              <span className="font-medium">More stake needed.</span> Add{" "}
-              {shortfall.toLocaleString()}{" "}
+              <span className="font-medium">
+                {eligibility.existingStakeSnapshot !== null
+                  ? "Stake below snapshot."
+                  : "More stake needed."}
+              </span>{" "}
+              Add {shortfall.toLocaleString()}{" "}
               {shortfall === 1 ? "token" : "tokens"} to reach the{" "}
-              {eligibility.requiredStake.toLocaleString()} token entry
-              requirement.
+              {eligibility.requiredStake.toLocaleString()} token{" "}
+              {alreadyEntered ? "locked snapshot" : "entry requirement"}.
             </p>
           </div>
         )}

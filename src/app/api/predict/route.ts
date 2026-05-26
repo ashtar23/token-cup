@@ -16,8 +16,12 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerSupabaseClient();
 
-  const { matchId, predictedResult, predictedGoalsRange, predictedFirstScorer } =
-    await req.json();
+  const {
+    matchId,
+    predictedResult,
+    predictedGoalsRange,
+    predictedFirstScorer,
+  } = await req.json();
 
   if (!matchId || !predictedResult) {
     return NextResponse.json(
@@ -76,16 +80,20 @@ export async function POST(req: NextRequest) {
     0,
   );
 
-  const alreadyEntered = !!thisMatchEntry;
   const eligibility = getStakeEligibility({
-    alreadyEntered,
+    currentEntry: thisMatchEntry,
     previousEntry: lastMatchEntry,
     totalStaked,
   });
   if (!eligibility.eligible) {
+    const message =
+      eligibility.existingStakeSnapshot !== null
+        ? `Restore your stake to at least ${eligibility.requiredStake.toLocaleString()} total tokens before editing this prediction.`
+        : `Stake more fan tokens to enter this match. You need at least ${eligibility.requiredStake.toLocaleString()} total staked tokens.`;
+
     return NextResponse.json(
       {
-        error: `Stake more fan tokens to enter this match. You need at least ${eligibility.requiredStake.toLocaleString()} total staked tokens.`,
+        error: message,
       },
       { status: 400 },
     );
@@ -113,10 +121,16 @@ export async function POST(req: NextRequest) {
   }
   const streak = activeStreak;
 
-  await supabase.from("user_match_entries").upsert(
-    { user_id: userId, match_id: matchId, total_staked_snapshot: totalStaked },
-    { onConflict: "user_id,match_id" },
-  );
+  await supabase
+    .from("user_match_entries")
+    .upsert(
+      {
+        user_id: userId,
+        match_id: matchId,
+        total_staked_snapshot: totalStaked,
+      },
+      { onConflict: "user_id,match_id" },
+    );
 
   const { error } = await supabase.from("predictions").upsert(
     {

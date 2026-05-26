@@ -4,23 +4,27 @@ export interface StakeEligibility {
   eligible: boolean;
   previousStake: number | null;
   requiredStake: number;
+  existingStakeSnapshot: number | null;
 }
 
 export function getStakeEligibility({
-  alreadyEntered,
+  currentEntry,
   previousEntry,
   totalStaked,
 }: {
-  alreadyEntered: boolean;
+  currentEntry: Pick<UserMatchEntry, "total_staked_snapshot"> | null;
   previousEntry: Pick<UserMatchEntry, "total_staked_snapshot"> | null;
   totalStaked: number;
 }): StakeEligibility {
   const previousStake = previousEntry?.total_staked_snapshot ?? null;
-  const requiredStake = previousStake === null ? 1 : previousStake + 1;
+  const existingStakeSnapshot = currentEntry?.total_staked_snapshot ?? null;
+  const requiredStake =
+    existingStakeSnapshot ?? (previousStake === null ? 1 : previousStake + 1);
 
   return {
-    eligible: alreadyEntered || totalStaked >= requiredStake,
+    eligible: totalStaked >= requiredStake,
     previousStake,
     requiredStake,
+    existingStakeSnapshot,
   };
 }

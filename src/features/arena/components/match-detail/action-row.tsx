@@ -16,16 +16,22 @@ export function ActionRow({
   match,
   prediction,
   has2x,
+  totalStaked,
 }: {
   match: Match;
   prediction: Prediction | null;
   has2x: boolean;
+  totalStaked: number;
 }) {
+  const isStakeBelowSnapshot =
+    prediction !== null && totalStaked < prediction.stake_snapshot;
+
   const state = {
     status: match.status,
     hasPrediction: prediction !== null,
     isVoided: prediction?.is_voided ?? false,
     isScored: prediction?.points_earned !== null && prediction !== null,
+    isStakeBelowSnapshot,
     has2x,
   };
 
@@ -66,6 +72,18 @@ export function ActionRow({
         actionLabel="Watch leaderboard"
       />
     ))
+    .with(
+      { status: "upcoming", hasPrediction: true, isStakeBelowSnapshot: true },
+      () => (
+        <ActionCard
+          icon={<CircleAlert className="h-4 w-4 text-destructive" />}
+          title="Stake below snapshot"
+          body="Restore your locked stake before full time. Edits are disabled while this prediction is at risk."
+          actionHref={`/arena/${match.id}/verify`}
+          actionLabel="Review stake"
+        />
+      ),
+    )
     .with({ status: "upcoming", hasPrediction: true, has2x: true }, () => (
       <ActionCard
         icon={<Sparkles className="h-4 w-4 text-tc-orange" />}

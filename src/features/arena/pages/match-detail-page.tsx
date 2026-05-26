@@ -60,6 +60,7 @@ export function MatchDetailPage() {
           match={match}
           prediction={prediction ?? null}
           has2x={has2x}
+          totalStaked={totalStaked}
         />
       </div>
     </>

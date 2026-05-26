@@ -6,7 +6,13 @@ import { InsetHeader } from "@/components/layout/InsetHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  RefreshCcw,
+  XCircle,
+} from "lucide-react";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { useMatch } from "@/features/matches/data-access/queries/use-match";
 import { useUserTokens } from "@/features/user/data-access/queries/use-user-tokens";
@@ -14,7 +20,10 @@ import { usePrediction } from "@/features/predictions/data-access/queries/use-pr
 import { useSubmitPrediction } from "@/features/predictions/data-access/mutations/use-submit-prediction";
 import { ToggleButton } from "@/features/predictions/components/toggle-button";
 import { FirstScorerPicker } from "@/features/predictions/components/first-scorer-picker";
-import { getHeldTokenSymbols } from "@/features/user/lib/tokens";
+import {
+  getHeldTokenSymbols,
+  getTotalStaked,
+} from "@/features/user/lib/tokens";
 import { TEAM_FLAG, GOALS_RANGES } from "@/lib/constants";
 import type { PredictedResult, GoalsRange } from "@/lib/types";
 
@@ -24,7 +33,11 @@ export function PredictPage() {
   const { matchId } = useParams<{ matchId: string }>();
 
   const { data: match, isLoading: matchLoading } = useMatch(matchId);
-  const { data: userTokens = [], isLoading: tokensLoading } = useUserTokens();
+  const {
+    data: userTokens = [],
+    isLoading: tokensLoading,
+    refetch: refetchTokens,
+  } = useUserTokens();
   const { data: existingPrediction, isLoading: predLoading } =
     usePrediction(matchId);
   const submit = useSubmitPrediction();
@@ -56,11 +69,17 @@ export function PredictPage() {
   }
 
   const heldTokens = getHeldTokenSymbols(userTokens);
+  const totalStaked = getTotalStaked(userTokens);
   const has2x =
     (match.home_token && heldTokens.includes(match.home_token)) ||
     (match.away_token && heldTokens.includes(match.away_token));
 
   const isLocked = match.status !== "upcoming";
+  const stakeSnapshot = existingPrediction?.stake_snapshot ?? null;
+  const isStakeBelowSnapshot =
+    stakeSnapshot !== null && totalStaked < stakeSnapshot;
+  const stakeShortfall =
+    stakeSnapshot === null ? 0 : Math.max(0, stakeSnapshot - totalStaked);
 
   const resultOptions: { value: PredictedResult; label: string }[] = [
     { value: "home_win", label: `${match.home_team} Win` },
@@ -120,6 +139,34 @@ export function PredictPage() {
               <p className="text-sm text-muted-foreground">
                 This match has already started.
               </p>
+            </CardContent>
+          </Card>
+        ) : isStakeBelowSnapshot ? (
+          <Card className="border border-destructive/30 bg-destructive/5">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex items-start gap-3">
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">
+                    Stake below locked snapshot
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    This prediction is locked from edits because your current
+                    stake is {totalStaked.toLocaleString()} tokens. Restore{" "}
+                    {stakeShortfall.toLocaleString()}{" "}
+                    {stakeShortfall === 1 ? "token" : "tokens"} before full
+                    time to keep it eligible for settlement.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => refetchTokens()}
+              >
+                <RefreshCcw className="h-4 w-4" />
+                I&apos;ve staked more - refresh balance
+              </Button>
             </CardContent>
           </Card>
         ) : (

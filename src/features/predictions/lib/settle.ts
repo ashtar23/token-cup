@@ -41,13 +41,10 @@ export async function settleMatchService(
     .select("user_id, staked_amount")
     .in("user_id", userIds);
 
-  const stakeByUser = new Map<string, number>();
-  for (const t of allTokens ?? []) {
-    stakeByUser.set(
-      t.user_id,
-      (stakeByUser.get(t.user_id) ?? 0) + t.staked_amount,
-    );
-  }
+  const stakeByUser = (allTokens ?? []).reduce((map, token) => {
+    map.set(token.user_id, (map.get(token.user_id) ?? 0) + token.staked_amount);
+    return map;
+  }, new Map<string, number>());
 
   const matchData = {
     id: matchId,
@@ -56,70 +53,80 @@ export async function settleMatchService(
   } as Match;
 
   const settledAt = new Date().toISOString();
-  const settledPredictions: Array<{
-    prediction: Prediction;
-    points: number;
-    voided: boolean;
-  }> = [];
-  let settled = 0;
-  for (const pred of predictions as Prediction[]) {
-    const currentStake = stakeByUser.get(pred.user_id) ?? 0;
-    const voided = currentStake < pred.stake_snapshot;
-    const points = voided ? 0 : calculatePoints(pred, matchData);
-    const { error } = await supabase
-      .from("predictions")
-      .update({
-        is_voided: voided,
-        points_earned: points,
-        settled_at: settledAt,
-      })
-      .eq("id", pred.id);
-    if (!error) {
-      settled++;
-      settledPredictions.push({ prediction: pred, points, voided });
-    }
-  }
+  const settledPredictions = (
+    await Promise.all(
+      (predictions as Prediction[]).map(async (pred) => {
+        const currentStake = stakeByUser.get(pred.user_id) ?? 0;
+        const voided = currentStake < pred.stake_snapshot;
+        const points = voided ? 0 : calculatePoints(pred, matchData);
+        const { error } = await supabase
+          .from("predictions")
+          .update({
+            is_voided: voided,
+            points_earned: points,
+            settled_at: settledAt,
+          })
+          .eq("id", pred.id);
+        return error ? null : { prediction: pred, points, voided };
+      }),
+    )
+  ).filter(
+    (
+      result,
+    ): result is {
+      prediction: Prediction;
+      points: number;
+      voided: boolean;
+    } => result !== null,
+  );
 
   const actualResult = getResult(homeScore, awayScore);
   const actualGoalsRange = goalsToRange(homeScore + awayScore);
-  const unlockedAchievementsByUser: Record<string, AchievementUnlock[]> = {};
+  const [matchRanksByUser, tournamentPointsByUser] = await Promise.all([
+    fetchMatchRanks(supabase, matchId),
+    fetchTournamentPointsByUser(supabase, userIds),
+  ]);
 
-  for (const settledPrediction of settledPredictions) {
-    const { prediction, points, voided } = settledPrediction;
-    const [matchRank, tournamentPoints] = await Promise.all([
-      fetchMatchRank(supabase, matchId, prediction.user_id),
-      fetchTournamentPoints(supabase, prediction.user_id),
-    ]);
+  const achievementResults = await Promise.all(
+    settledPredictions.map(async ({ prediction, points, voided }) => {
+      const unlocks = await recordAchievementEvent(supabase, {
+        type: "MATCH_SETTLED",
+        userId: prediction.user_id,
+        sourceId: matchId,
+        payload: {
+          pointsEarned: points,
+          isVoided: voided,
+          streakCount: prediction.streak_count,
+          has2xBonus: prediction.has_2x_bonus,
+          correctResult: prediction.predicted_result === actualResult,
+          correctGoalsRange:
+            prediction.predicted_goals_range === actualGoalsRange,
+          matchRank: matchRanksByUser.get(prediction.user_id) ?? null,
+          tournamentPoints: tournamentPointsByUser.get(prediction.user_id) ?? 0,
+        },
+      });
 
-    const unlocks = await recordAchievementEvent(supabase, {
-      type: "MATCH_SETTLED",
-      userId: prediction.user_id,
-      sourceId: matchId,
-      payload: {
-        pointsEarned: points,
-        isVoided: voided,
-        streakCount: prediction.streak_count,
-        has2xBonus: prediction.has_2x_bonus,
-        correctResult: prediction.predicted_result === actualResult,
-        correctGoalsRange: prediction.predicted_goals_range === actualGoalsRange,
-        matchRank,
-        tournamentPoints,
-      },
-    });
+      return { userId: prediction.user_id, unlocks };
+    }),
+  );
 
-    if (unlocks.length > 0) {
-      unlockedAchievementsByUser[prediction.user_id] = unlocks;
-    }
-  }
+  const unlockedAchievementsByUser = Object.fromEntries(
+    achievementResults
+      .filter(({ unlocks }) => unlocks.length > 0)
+      .map(({ userId, unlocks }) => [userId, unlocks]),
+  );
 
-  return { settled, matchUpdated: true, unlockedAchievementsByUser };
+  return {
+    settled: settledPredictions.length,
+    matchUpdated: true,
+    unlockedAchievementsByUser,
+  };
 }
 
-async function fetchMatchRank(
+async function fetchMatchRanks(
   supabase: SupabaseClient,
   matchId: string,
-  userId: string,
-): Promise<number | null> {
+): Promise<Map<string, number>> {
   const { data } = await supabase
     .from("match_leaderboard_view")
     .select("user_id, total_points")
@@ -127,19 +134,22 @@ async function fetchMatchRank(
     .order("total_points", { ascending: false });
 
   const rows = (data ?? []) as { user_id: string; total_points: number }[];
-  const index = rows.findIndex((row) => row.user_id === userId);
-  return index === -1 ? null : index + 1;
+  return new Map(rows.map((row, index) => [row.user_id, index + 1]));
 }
 
-async function fetchTournamentPoints(
+async function fetchTournamentPointsByUser(
   supabase: SupabaseClient,
-  userId: string,
-): Promise<number> {
+  userIds: string[],
+): Promise<Map<string, number>> {
   const { data } = await supabase
     .from("tournament_leaderboard_view")
-    .select("total_points")
-    .eq("user_id", userId)
-    .maybeSingle();
+    .select("user_id, total_points")
+    .in("user_id", userIds);
 
-  return ((data as { total_points?: number } | null)?.total_points ?? 0);
+  return new Map(
+    ((data ?? []) as { user_id: string; total_points: number }[]).map((row) => [
+      row.user_id,
+      row.total_points,
+    ]),
+  );
 }
